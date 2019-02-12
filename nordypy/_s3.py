@@ -659,19 +659,19 @@ def s3_download(bucket,
     Example use
     -----------
     # to download a single file
-    s3_download(bucket='persis-datalab-team',
+    s3_download(bucket='nordypy',
                 s3_filepath='tmp/myfile.csv',
                 filepath='..data/myfile.csv',
                 environment='local')
 
     # to download all files in a directory (will not upload contents of subdirectories)
-    s3_download(bucket='persis-datalab-team',
+    s3_download(bucket='nordypy',
                 s3_filepath='tmp/*',
                 filepath='..data/',
                 environment='local')
 
     # to download all files in a directory matching a wildcard (will not download contents of subdirectories)
-    s3_download(bucket='persis-datalab-team',
+    s3_download(bucket='nordypy',
                 s3_filepath='tmp/*.csv',
                 filepath='..data/',
                 environment='local')
@@ -759,19 +759,19 @@ def s3_upload(bucket,
     Example use
     -----------
     # to upload a single file
-    s3_upload(bucket='persis-datalab-team',
+    s3_upload(bucket='nordypy',
               s3_filepath='tmp/myfile.csv',
               filepath='..data/myfile.csv',
               environment='local')
 
     # to upload all files in a directory (will not upload contents of subdirectories)
-    s3_upload(bucket='persis-datalab-team',
+    s3_upload(bucket='nordypy',
               s3_filepath='tmp/',
               filepath='..data/*',
               environment='local')
 
     # to upload all files in a directory matching a wildcard (will not upload contents of subdirectories)
-    s3_upload(bucket='persis-datalab-team',
+    s3_upload(bucket='nordypy',
               s3_filepath='tmp/',
               filepath='../data/*.csv')
     """

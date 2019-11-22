@@ -1,0 +1,58 @@
+stages:
+    - image
+    - test
+    - deploy
+
+before_script:
+    - |
+        if [ "$CI_COMMIT_REF_NAME" = "master" ]; then
+            export ENV=prod
+        else
+            export ENV=dev
+        fi
+
+docker:
+    stage: image
+    image: gitlab-registry.nordstrom.com/cicd/gitlab-shared-runner/docker:stable
+    services:
+        - name: gitlab-registry.nordstrom.com/cicd/gitlab-shared-runner/docker:dind
+          alias: docker
+    tags:
+        - docker
+    script:
+        - docker login $CI_REGISTRY -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD
+        - docker build . -t $CI_REGISTRY_IMAGE/$ENV:$CI_COMMIT_SHA --build-arg SSH_PRIVATE_KEY="$NORDYPY_SSH" --build-arg CI_COMMIT_SHA="$CI_COMMIT_SHA"
+        - docker tag $CI_REGISTRY_IMAGE/$ENV:$CI_COMMIT_SHA $CI_REGISTRY_IMAGE/$ENV:latest
+        - docker push $CI_REGISTRY_IMAGE/$ENV:$CI_COMMIT_SHA
+        - docker push $CI_REGISTRY_IMAGE/$ENV:latest
+
+.tests: &tests
+    stage: test
+    script:
+        - echo Run python tests from command line
+        - echo Run python test coverage from command line
+    artifacts:
+        when: on_failure
+        paths:
+            - ./*
+
+test_dev:
+    <<: *tests
+    image: $CI_REGISTRY_IMAGE/dev:$CI_COMMIT_SHA
+    except:
+        - master
+
+test_prod:
+    <<: *tests
+    image: $CI_REGISTRY_IMAGE/prod:$CI_COMMIT_SHA
+    only:
+        - master
+
+# github:
+#     stage: deploy
+#     script:
+#         - git remote add github https://github.com/Nordstrom/nordypy.git
+#         - git push github $CI_COMMIT_REF_NAME # TODO add github credentials
+#     only:
+#         - develop
+#         - master

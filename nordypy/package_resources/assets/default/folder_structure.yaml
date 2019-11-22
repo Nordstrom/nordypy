@@ -1,0 +1,4 @@
+default:
+  # standard folder structure for digital analytics and data science
+  structure: ['code', 'code/R', 'code/SQL', 'code/python', 'sandbox', 'data', 'logs', 'output', 'docs']
+  files: [{'file': 'assets/default/.gitignore', 'name': '.gitignore'}, {'file': 'assets/default/README.md', 'name': 'README.md'}, {'file': 'assets/default/config.yaml', 'name': 'config.yaml'}]

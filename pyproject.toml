@@ -1,0 +1,22 @@
+[build-system]
+requires = ["flit"]
+build-backend = "flit.buildapi"
+
+[tool.flit.metadata]
+module = "nordypy"
+author = "aaron.lichtner"
+author-email = "aaron.lichtner@nordstrom.com"
+home-page = "https://github.com/nordstrom/nordypy"
+requires=[
+          "psycopg2-binary",
+          "pyyaml",
+          "boto3",
+          "pystache",
+          "pandas",
+          "pymysql"
+          ]
+classifiers = ["License :: OSI Approved :: Apache Software License"]
+
+
+
+

@@ -652,6 +652,13 @@ nordypy.render_post(file_to_render='my_algorithm_doc.md',
 
 ---
 
+# Development Instructions
+
+`nordypy` is published to PyPi via [flit](https://flit.readthedocs.io/en/latest/). You'll need to install that package to do any local development. Instructions can be found [here](https://flit.readthedocs.io/en/latest/).
+
+1. Branch off the `public-github` branch inside of *gitlab*.
+2. Write and test your code locally. Using `flit install` to install the local version to your environment. Note: It is recommended that you do this inside a virtualenv. 
+3. Submit a merge request have someone review your code before merging.
 
 ## Contributors
 
@@ -661,5 +668,6 @@ nordypy.render_post(file_to_render='my_algorithm_doc.md',
 - Julie Creamer
 - Nick Buker
 - Gina Schmalzle
+- Nima Maghoul
 
 Please direct questions, bugs, and feature requests to Aaron Lichtner (aaron.lichtner@nordstrom.com)

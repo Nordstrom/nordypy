@@ -1,4 +1,10 @@
+#### Updates Version 1.2.2
 
+- Development structure was changed so that any changes made to the `public-github` branch inside of *gitlab* will automatically flow to `public-github` on Nordstrom's public-facing *github* acccount
+
+#### Updates Version 1.2.1
+
+- Nordypy is now in Github and PyPi! You can install with `pip install nordypy`.
 
 #### Updates Version 1.1.2
 

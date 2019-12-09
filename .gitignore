@@ -1,3 +1,5 @@
+*.vscode
+
 # nordypy dev stuff
 flit_env
 notebooks

@@ -690,10 +690,10 @@ def s3_download(bucket,
         # use left and right for pattern matching
         left = s3_filepath.split('*')[0]
         right = s3_filepath.split('*')[-1]
-        # construct s3_path without wildcard
-        s3_path = '/'.join(s3_filepath.split('/')[:-1]) + '/'
+        # construct s3_filepath without wildcard
+        s3_filepath = '/'.join(s3_filepath.split('/')[:-1]) + '/'
         # get keys, filter out directories, match wildcard, get filenames
-        keys = [item.key for item in mybucket.objects.filter(Prefix=s3_path)
+        keys = [item.key for item in mybucket.objects.filter(Prefix=s3_filepath)
                 if item.key[-1] != '/' and left in item.key and right in item.key]
         filenames = [key.split('/')[-1] for key in keys]
     else:

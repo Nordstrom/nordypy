@@ -99,6 +99,9 @@ Also keep in mind, if you have a secret_name in your yaml, nordypy will use thos
 - [s3_to_pandas](#s3-to-pandas)
 - [s3_upload](#s3-upload)
 
+#### Athena Functions
+- [athena_to_pandas](#athena-to-pandas)
+
 #### Knowledge Repo Functions
 - [render_post](#render-post)
 
@@ -619,6 +622,25 @@ nordypy.s3_upload(bucket='mybucket',
                   s3_filepath='cloud.txt',
                   local_filepath='data/local.txt',
                   permission='public-read')
+```
+
+---
+
+## Athena Functions
+
+---
+
+<a name='athena-to-pandas'>
+
+### `nordypy.athena_to_pandas()`
+
+</a>
+Takes a presto sql query and queries existing tables in athena. Writes query results into specified s3 path in a specified bucket then returns query results as a pandas dataframe. If no s3 path is specified, a "temp_*" folder will be created then deleted after the pandas dataframe is returned. 
+
+```python 
+#aws-okta needs to be running
+sql = ''' SELECT * FROM "SCHEMA"."TABLE"  LIMIT 100'''
+df = nordypy.athena_to_pandas(sql=sql, bucket_name='your-bucket-name')
 ```
 
 ---

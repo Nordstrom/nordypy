@@ -36,15 +36,17 @@ from ._datasource import database_list_tables
 from ._datasource import database_to_pandas
 from ._datasource import redshift_to_redshift
 
-# dynamo functions
-# from .dynamo import dynamo_table_create
-# from .dynamo import dynamo_table_write
+# athena
+from ._athena import athena_to_pandas
+
+# secrets
+from ._secret import _get_secret
 
 # knowledge repo functions
 from ._knowledge_repo_utils import render_post
 
-__version__ = '1.2.2'
+__version__ = '1.3.1'
 
 __all__ = ["_datasource", "_init_methods", "_knowledge_repo_utils",
-           "_nordstrom_rock_it", "_redshift_utils", "_s3",
+           "_nordstrom_rock_it", "_redshift_utils", "_s3", "_athena"
            ]

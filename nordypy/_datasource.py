@@ -74,12 +74,12 @@ def database_connect(database_key=None, yaml_filepath=None):
     if yaml_filepath:
         try:
             with open(os.path.expanduser(yaml_filepath), 'r') as ymlfile:
-                cfg = yaml.load(ymlfile)
+                cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
         except (OSError, IOError):  # if out of order (for both python 2 and 3)
             temp_filepath = database_key
             database_key = yaml_filepath
             with open(os.path.expanduser(temp_filepath), 'r') as ymlfile:
-                cfg = yaml.load(ymlfile)
+                cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
         if _dict_depth(cfg) != 1:
             if database_key:
                 cfg = cfg[database_key]
@@ -90,10 +90,10 @@ def database_connect(database_key=None, yaml_filepath=None):
             if  'region_name' in cfg:
                 cfg = _get_secret(cfg['secret_name'], region_name = cfg['region_name'])
             else:
-                print("You are trying to access AWS secrets and need region_name.") 
+                print("You are trying to access AWS secrets and need region_name.")
                 print("Please specify region_name in config.yaml (e.g., us-west-2)")
                 print("Exiting now.")
-                sys.exit() 
+                sys.exit()
         if 'dbtype' not in cfg:
             print(
                 "UserWarning: Update config.yaml with 'dbtype' parameter: ['redshift', 'mysql', 'teradata'] -- ")
@@ -598,7 +598,7 @@ def data_to_redshift(data, table_name, bucket, s3_filepath='temp',
                                   create_statement=create_statement)
     # upload data to s3
     pandas_to_s3(data=data, delimiter=delimiter, bucket=bucket,
-                 s3_filepath=s3_filepath, environment=environment, 
+                 s3_filepath=s3_filepath, environment=environment,
                  profile_name=profile_name)
 
     # copy from s3 to redshift

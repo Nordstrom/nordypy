@@ -90,10 +90,10 @@ def database_connect(database_key=None, yaml_filepath=None):
             if  'region_name' in cfg:
                 cfg = _get_secret(cfg['secret_name'], region_name = cfg['region_name'])
             else:
-                print("You are trying to access AWS secrets and need region_name.") 
+                print("You are trying to access AWS secrets and need region_name.")
                 print("Please specify region_name in config.yaml (e.g., us-west-2)")
                 print("Exiting now.")
-                sys.exit() 
+                sys.exit()
         if 'dbtype' not in cfg:
             print(
                 "UserWarning: Update config.yaml with 'dbtype' parameter: ['redshift', 'mysql', 'teradata'] -- ")
@@ -507,12 +507,54 @@ def database_get_data(database_key=None, yaml_filepath=None, sql=None,
     return data
 
 
-def database_list_tables(schema=None, prefix=None, database_key=None,
-                         yaml_filepath=None, conn=None):
-    """List the table names, their size and optionally their row names and
-    variable types."""
-    pass
+def database_list_tables(schemaname=None, tableowner=None, searchstring=None, get_sizes=False,
+                        database_key=None, yaml_filepath=None, conn=None, query_group=None):
+    """List table names by schema and optionally by tableowner or tablename searchstring.
+       Return dictionary of dataframes with column names and variable types for each table.
+       Optionally return dataframe with size and number of rows for each table."""
 
+    sql = """SELECT tablename
+             FROM pg_tables
+             WHERE schemaname = '{}'""".format(schemaname)
+    if tableowner:
+        sql += """ AND tableowner = '{}'""".format(tableowner)
+    if searchstring:
+        sql +=""" AND tablename LIKE '{}'""".format(searchstring)
+    sql += ';'
+
+    tables = database_get_data(database_key=database_key,
+                                 yaml_filepath=yaml_filepath,
+                                 sql=sql,
+                                 conn=conn,
+                                 as_pandas=True,
+                                 query_group=query_group)
+    col_dtypes = {}
+    for table in tables['tablename'].tolist():
+        cols = database_get_column_names(database_key='dsa',
+                                  yaml_filepath=yaml_filepath,
+                                  table=table,
+                                  schema=schemaname,
+                                  data_type=True)
+        col_dtypes[table] = cols
+    if get_sizes:
+        sizes = []
+        for table in tables['tablename'].tolist():
+            sql = """SELECT "table", size, tbl_rows
+                     FROM SVV_TABLE_INFO
+                     WHERE database = 'cust_analytics_prd'
+                     AND schema = '{}'
+                     AND "table" = '{}'""".format(schemaname, table)
+            size = database_get_data(database_key=database_key,
+                                             yaml_filepath=yaml_filepath,
+                                             sql=sql,
+                                             conn=conn,
+                                             as_pandas=True,
+                                             query_group=query_group)
+            sizes.append(size)
+        sizes = pd.concat(sizes, ignore_index=True)
+        return col_dtypes, sizes
+    else:
+        return col_dtypes
 
 def database_to_pandas(database_key=None, yaml_filepath=None, sql=None,
                        conn=None, query_group=None):
@@ -598,7 +640,7 @@ def data_to_redshift(data, table_name, bucket, s3_filepath='temp',
                                   create_statement=create_statement)
     # upload data to s3
     pandas_to_s3(data=data, delimiter=delimiter, bucket=bucket,
-                 s3_filepath=s3_filepath, environment=environment, 
+                 s3_filepath=s3_filepath, environment=environment,
                  profile_name=profile_name)
 
     # copy from s3 to redshift

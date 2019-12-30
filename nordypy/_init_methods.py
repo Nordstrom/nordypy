@@ -162,7 +162,7 @@ def initialize_project(structure=None, create_folders=True, create_files=True,
     # load up official structures
     yaml_location = pkg_resources.resource_filename('nordypy', yaml_location)
     with open(yaml_location, 'r') as ymlfile:
-        cfg = yaml.load(ymlfile)
+        cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
     files = cfg[structure]['files']  # files to build
     structure = cfg[structure]['structure']  # folder structure to build
     high_level, low_level = _unpack_folder_structure(structure)

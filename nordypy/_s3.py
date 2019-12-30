@@ -58,12 +58,12 @@ def database_connect(database_key=None, yaml_filepath=None):
     if yaml_filepath:
         try:
             with open(os.path.expanduser(yaml_filepath), 'r') as ymlfile:
-                cfg = yaml.load(ymlfile)
+                cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
         except (OSError, IOError):  # if out of order (for both python 2 and 3)
             temp_filepath = database_key
             database_key = yaml_filepath
             with open(os.path.expanduser(temp_filepath), 'r') as ymlfile:
-                cfg = yaml.load(ymlfile)
+                cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
         if _dict_depth(cfg) != 1:
             if database_key:
                 cfg = cfg[database_key]

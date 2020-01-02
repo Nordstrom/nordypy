@@ -887,3 +887,86 @@ def s3_get_permissions(bucket, s3_filepath, region_name='us-west-2',
             pass
     possible_current_acl = ['aws-exec-read']
     return possible_current_acl, grants
+
+def get_matching_s3_objects(bucket, prefix="", suffix="", 
+                            region_name='us-west-2', environment=None, profile_name='nordstrom-federated'):
+    """
+    Generate objects in an S3 bucket.
+
+    Parameters
+    ----------
+    bucket : str [REQUIRED]
+        S3 bucket name
+    prefix : str or list
+        Only fetch objects whose key starts with this prefix (optional)
+    suffix : str
+        Only fetch objects whose keys end withthis suffix (optional)
+    region_name : str
+        name of AWS region (default value 'us-west-2')
+    environment : str
+        'aws' or 'local' depending on whether running locally or in AWS
+    profile_name : str
+        profile name for credential purposes when running locally,
+        typically 'nordstrom-federated'
+
+    Example Use:
+    ------------
+    for obj in get_matching_s3_objects(bucket='nordypy', prefix='temp'):
+        print(obj['Size'])
+    """
+    s3 = _s3_create_session(region_name=region_name, environment=environment, profile_name=profile_name).client('s3')
+    paginator = s3.get_paginator("list_objects_v2")
+
+    kwargs = {'Bucket': bucket}
+
+    # We can pass the prefix directly to the S3 API.  If the user has passed
+    # a tuple or list of prefixes, we go through them one by one.
+
+    if isinstance(prefix, str):
+        prefixes = (prefix, )
+    else:
+        prefixes = prefix
+
+    for key_prefix in prefixes:
+        kwargs["Prefix"] = key_prefix
+
+        for page in paginator.paginate(**kwargs):
+            try:
+                contents = page["Contents"]
+            except KeyError:
+                return
+
+            for obj in contents:
+                key = obj["Key"]
+                if key.endswith(suffix):
+                    yield obj
+
+
+def get_matching_s3_keys(bucket, prefix="", suffix="",
+                         region_name='us-west-2', environment=None, profile_name='nordstrom-federated'):
+    """
+    Generate keys in an S3 bucket matching certain criteria.
+
+        Parameters
+    ----------
+    bucket : str [REQUIRED]
+        S3 bucket name
+    prefix : str or list
+        Only fetch objects whose key starts with this prefix (optional)
+    suffix : str
+        Only fetch objects whose keys end withthis suffix (optional)
+    region_name : str
+        name of AWS region (default value 'us-west-2')
+    environment : str
+        'aws' or 'local' depending on whether running locally or in AWS
+    profile_name : str
+        profile name for credential purposes when running locally,
+        typically 'nordstrom-federated'
+        
+    Example Use:
+    ------------
+    all_keys_in_bucket = [k for k in get_matching_s3_keys(bucket='nordypy)]
+    """
+    for obj in get_matching_s3_objects(bucket, prefix, suffix):
+        yield obj["Key"]
+

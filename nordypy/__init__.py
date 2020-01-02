@@ -20,6 +20,8 @@ from ._s3 import s3_change_permissions
 from ._s3 import s3_get_permissions
 from ._s3 import s3_download_all
 from ._s3 import s3_get
+from ._s3 import get_matching_s3_keys
+from ._s3 import get_matching_s3_objects
 # redshift functions
 from ._datasource import database_analyze_table
 from ._datasource import database_connect

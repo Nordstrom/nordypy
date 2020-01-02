@@ -507,11 +507,57 @@ def database_get_data(database_key=None, yaml_filepath=None, sql=None,
     return data
 
 
-def database_list_tables(schema=None, prefix=None, database_key=None,
-                         yaml_filepath=None, conn=None):
-    """List the table names, their size and optionally their row names and
-    variable types."""
-    pass
+def database_list_tables(schemaname=None, tableowner=None, searchstring=None,
+                        database_key=None, yaml_filepath=None, conn=None):
+    """
+    List table names by schema and optionally by tableowner or tablename searchstring.
+
+    Parameters
+    ----------
+    schemaname : str
+        schema name to search in
+    tableowner : str
+        description
+    searchstring : str
+        description
+    database_key : str [REQUIRED]
+        indicates which yaml login you plan to use or the bash_variable
+        key if no YAML file is provided
+    yaml_filepath : str
+        path to yaml file to connect
+        if no yaml_file is given, will assume that the database_key is
+        for a bash_variable
+    conn : database connection
+        database connection object if you want to pass in an already
+        established connection
+
+    Returns
+    -------
+    tables : dataframe
+        query results that includes schema name, table name and owner name
+
+    Examples
+    --------
+    table_names = nordypy.database_list_tables(schemaname='analytics_user_vws',
+                                               tableowner='clhq',
+                                               searchstring=None,
+                                               database_key='dsa',
+                                               yaml_filepath='~/config.yaml')
+    """
+    sql = """SELECT schemaname, tablename, tableowner FROM pg_tables WHERE 1=1"""
+    if schemaname:
+        sql += """ AND schemaname = '{}'""".format(schemaname)
+    if tableowner:
+        sql += """ AND tableowner = '{}'""".format(tableowner)
+    if searchstring:
+        sql +=""" AND tablename LIKE '{}'""".format(searchstring)
+    print('Running query: """{}"""'.format(sql))
+    tables = database_get_data(database_key=database_key,
+                                 yaml_filepath=yaml_filepath,
+                                 sql=sql,
+                                 conn=conn,
+                                 as_pandas=True)
+    return tables
 
 
 def database_to_pandas(database_key=None, yaml_filepath=None, sql=None,

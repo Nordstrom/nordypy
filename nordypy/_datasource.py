@@ -507,11 +507,43 @@ def database_get_data(database_key=None, yaml_filepath=None, sql=None,
     return data
 
 
-def database_list_tables(schemaname=None, tableowner=None, searchstring=None, get_sizes=False,
-                        database_key=None, yaml_filepath=None, conn=None, query_group=None):
-    """List table names by schema and optionally by tableowner or tablename searchstring.
-       Return dictionary of dataframes with column names and variable types for each table.
-       Optionally return dataframe with size and number of rows for each table."""
+def database_list_tables(schemaname=None, tableowner=None, searchstring=None,
+                        database_key=None, yaml_filepath=None, conn=None):
+    """
+    List table names by schema and optionally by tableowner or tablename searchstring.
+
+    Parameters
+    ----------
+    schemaname : str [REQUIRED]
+        schema name to search in
+    tableowner : str
+        description
+    searchstring : str
+        description
+    database_key : str [REQUIRED]
+        indicates which yaml login you plan to use or the bash_variable
+        key if no YAML file is provided
+    yaml_filepath : str
+        path to yaml file to connect
+        if no yaml_file is given, will assume that the database_key is
+        for a bash_variable
+    conn : database connection
+        database connection object if you want to pass in an already
+        established connection
+
+    Returns
+    -------
+    table_names : list
+        list of table names
+
+    Examples
+    --------
+    table_names = nordypy.database_list_tables(schemaname='analytics_user_vws',
+                                               tableowner='clhq',
+                                               searchstring=None,
+                                               database_key='dsa',
+                                               yaml_filepath='~/config.yaml')
+    """
 
     sql = """SELECT tablename
              FROM pg_tables
@@ -526,35 +558,10 @@ def database_list_tables(schemaname=None, tableowner=None, searchstring=None, ge
                                  yaml_filepath=yaml_filepath,
                                  sql=sql,
                                  conn=conn,
-                                 as_pandas=True,
-                                 query_group=query_group)
-    col_dtypes = {}
-    for table in tables['tablename'].tolist():
-        cols = database_get_column_names(database_key='dsa',
-                                  yaml_filepath=yaml_filepath,
-                                  table=table,
-                                  schema=schemaname,
-                                  data_type=True)
-        col_dtypes[table] = cols
-    if get_sizes:
-        sizes = []
-        for table in tables['tablename'].tolist():
-            sql = """SELECT "table", size, tbl_rows
-                     FROM SVV_TABLE_INFO
-                     WHERE database = 'cust_analytics_prd'
-                     AND schema = '{}'
-                     AND "table" = '{}'""".format(schemaname, table)
-            size = database_get_data(database_key=database_key,
-                                             yaml_filepath=yaml_filepath,
-                                             sql=sql,
-                                             conn=conn,
-                                             as_pandas=True,
-                                             query_group=query_group)
-            sizes.append(size)
-        sizes = pd.concat(sizes, ignore_index=True)
-        return col_dtypes, sizes
-    else:
-        return col_dtypes
+                                 as_pandas=True)
+    table_names = tables['tablename'].tolist()
+    return table_names
+
 
 def database_to_pandas(database_key=None, yaml_filepath=None, sql=None,
                        conn=None, query_group=None):

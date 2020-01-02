@@ -514,7 +514,7 @@ def database_list_tables(schemaname=None, tableowner=None, searchstring=None,
 
     Parameters
     ----------
-    schemaname : str [REQUIRED]
+    schemaname : str
         schema name to search in
     tableowner : str
         description
@@ -533,8 +533,8 @@ def database_list_tables(schemaname=None, tableowner=None, searchstring=None,
 
     Returns
     -------
-    table_names : list
-        list of table names
+    tables : dataframe
+        query results that includes schema name, table name and owner name
 
     Examples
     --------
@@ -544,23 +544,20 @@ def database_list_tables(schemaname=None, tableowner=None, searchstring=None,
                                                database_key='dsa',
                                                yaml_filepath='~/config.yaml')
     """
-
-    sql = """SELECT tablename
-             FROM pg_tables
-             WHERE schemaname = '{}'""".format(schemaname)
+    sql = """SELECT schemaname, tablename, tableowner FROM pg_tables WHERE 1=1"""
+    if schemaname:
+        sql += """ AND schemaname = '{}'""".format(schemaname)
     if tableowner:
         sql += """ AND tableowner = '{}'""".format(tableowner)
     if searchstring:
         sql +=""" AND tablename LIKE '{}'""".format(searchstring)
-    sql += ';'
-
+    print('Running query: """{}"""'.format(sql))
     tables = database_get_data(database_key=database_key,
                                  yaml_filepath=yaml_filepath,
                                  sql=sql,
                                  conn=conn,
                                  as_pandas=True)
-    table_names = tables['tablename'].tolist()
-    return table_names
+    return tables
 
 
 def database_to_pandas(database_key=None, yaml_filepath=None, sql=None,

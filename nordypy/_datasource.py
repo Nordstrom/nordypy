@@ -1,4 +1,5 @@
 import psycopg2
+import teradatasql
 import pymysql
 import os, sys
 import yaml
@@ -16,17 +17,17 @@ from ._secret import _get_secret
 
 def database_analyze_table(database_key=None, yaml_filepath=None, table=None,
                            schema=None):
-    """Analyze table stats in redshift.
+    """Analyze table stats in redshift. Will NOT work for teradata.
 
     Parameters
     ----------
     database_key : str
     yaml_filepath : str
     table : str
-            table name in redshift, could also be the schema and table
-            together ex. table='public.nordypy_test'
+        table name in redshift, could also be the schema and table
+        together ex. table='public.nordypy_test'
     schema : str
-            table schema in redshift (ex. public)
+        table schema in redshift (ex. public)
     """
     if table is None:
         raise ValueError('Provide a table name: ex. sessions')
@@ -44,7 +45,7 @@ def database_analyze_table(database_key=None, yaml_filepath=None, table=None,
 
 def database_connect(database_key=None, yaml_filepath=None):
     """Return a database connection object. Connect with YAML config or bash
-    environment variables.
+    environment variables. Works for redshift, mysql, and teradata.
 
     Parameters
     ----------
@@ -95,11 +96,12 @@ def database_connect(database_key=None, yaml_filepath=None):
                 print("Exiting now.")
                 sys.exit()
         if 'dbtype' not in cfg:
-            print(
-                "UserWarning: Update config.yaml with 'dbtype' parameter: ['redshift', 'mysql', 'teradata'] -- ")
+            print("UserWarning: Update config.yaml with 'dbtype' parameter: ['redshift', 'mysql', 'teradata'] -- ")
         if 'dbtype' in cfg:
             if cfg['dbtype'] == 'mysql':
                 conn = __mysql_connect(cfg)
+            elif cfg['dbtype'] == 'teradata':
+                conn = __teradata_connect(cfg)
             else:
                 conn = __redshift_connect(cfg)
         else:
@@ -128,7 +130,6 @@ def database_connect(database_key=None, yaml_filepath=None):
         raise ValueError('Provide a YAML file path or a connection string via a bash_variable')
     return conn
 
-
 def __redshift_connect(cfg):
     return psycopg2.connect(host=cfg['host'],
                             dbname=cfg['dbname'],
@@ -136,7 +137,6 @@ def __redshift_connect(cfg):
                             port=cfg['port'],
                             user=cfg['user']
                             )
-
 
 def __mysql_connect(cfg):
     return pymysql.connect(host=cfg['host'],
@@ -146,11 +146,28 @@ def __mysql_connect(cfg):
                            user=cfg['user']
                            )
 
+def __teradata_connect(cfg):
+    config = {
+        'host': cfg['host'],
+        'password': cfg['password'],
+        'user': cfg['user']
+    }
+
+    if cfg['use_ldap']:
+        config['logmech'] = 'LDAP'
+
+    if 'port' in cfg.keys():
+        config['dbs_port'] = cfg['port']
+
+    if 'database' in cfg.keys():
+        config['database'] = cfg['database']
+
+    return teradatasql.connect(**config)
 
 def database_drop_table(table_name=None, database_key=None, yaml_filepath=None,
                         conn=None):
     """
-    Drop table in redshift if exists.
+    Drop table in if exists. Will NOT work for teradata.
 
     Parameters
     ----------
@@ -193,7 +210,7 @@ def database_create_table(data=None, table_name='', make_public=True,
                           create_statement=None, conn=None):
     """
     Create blank table. Can use premade statement or autogenerate the create
-    statement based on the data input.
+    statement based on the data input. Will NOT work for teradata.
 
     Parameters
     ----------
@@ -261,7 +278,7 @@ def database_insert(data=None, table_name='', database_key=None,
     """
     Insert data into an already existing table. Can insert a full csv, a full
     pandas dataframe, a single tuple of data, or run an insert statement on
-    tables already in the database.
+    tables already in the database. Will NOT work for teradata.
 
     Parameters
     ----------
@@ -331,7 +348,7 @@ def database_insert(data=None, table_name='', database_key=None,
 def database_execute(database_key=None, yaml_filepath=None, sql=None,
                      conn=None, return_data=False, as_pandas=False,
                      query_group=None):
-    """Excecute one or more sql statements.
+    """Excecute one or more sql statements. Works for redshift, mysql and teradata.
 
     Parameters
 
@@ -408,7 +425,7 @@ def database_execute(database_key=None, yaml_filepath=None, sql=None,
 
 def database_get_column_names(database_key=None, yaml_filepath=None,
                               table=None, schema=None, data_type=False):
-    """Determine column names on a particular table.
+    """Determine column names on a particular table. Will NOT work for teradata.
 
     Parameters
     ----------
@@ -442,7 +459,8 @@ def database_get_data(database_key=None, yaml_filepath=None, sql=None,
                       as_pandas=False, conn=None, query_group=None):
     """
     Helper function to connect to a datasource, run the specified sql
-    statement(s), close the connection and return the result(s).
+    statement(s), close the connection and return the result(s). 
+    Works for redshift, mysql and teradata.
 
     Parameters
     ----------
@@ -511,6 +529,7 @@ def database_list_tables(schemaname=None, tableowner=None, searchstring=None,
                         database_key=None, yaml_filepath=None, conn=None):
     """
     List table names by schema and optionally by tableowner or tablename searchstring.
+    Will NOT work for teradata.
 
     Parameters
     ----------
@@ -562,7 +581,8 @@ def database_list_tables(schemaname=None, tableowner=None, searchstring=None,
 
 def database_to_pandas(database_key=None, yaml_filepath=None, sql=None,
                        conn=None, query_group=None):
-    """Convenience wrapper for for database_get_data to pandas function.
+    """Convenience wrapper for for database_get_data to pandas function. 
+    Works for redshift, mysql and teradata.
     """
     return database_get_data(database_key=database_key,
                              yaml_filepath=yaml_filepath,

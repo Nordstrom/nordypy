@@ -4,7 +4,7 @@ The Nordypy package is a set of tools to make python-based analysis and data sci
 This package is being developed in conjunction with the R-based packages ElmeR and nordyR. This is made for the public-facing version on github.
 
 ## What can Nordypy do for you
-- Manipulate data on your local system, Redshift, MySQL, and in S3
+- Manipulate data on your local system, Redshift, MySQL, Teradata, and in S3
 - Create a fresh repo structure with folders, readme, config.yaml, .gitignore, and more...
 - Render jupyter notebooks and markdown for the Nordstrom knowledge-repo.
 
@@ -43,6 +43,15 @@ my_mysql:
   user: <USER NAME>
   password: <PASSWORD>
   dbtype: <DB TYPE>
+my_teradata:
+  host: <DB ADDRESS>
+  port: <DB PORT> [defaults to 1025]
+  database: <DB NAME> [optional]
+  user: <USER NAME>
+  password: <PASSWORD>
+  dbtype: <DB TYPE>
+  use_ldap: <true/false>
+
 ```
 
 `host` refers to the host address where the database can be found. `port` should be the database port. `dbname` is the name of the database you are connecting to. `user` should be your username of service account name. `password` is your account's passoword. Finally, `dbtype` refers to the type of database it is. Currently, `redshift` and `mysql` are supported as far as relational databases.
@@ -162,7 +171,7 @@ path specifies the path you would like the config file.  If ask_me = False will 
 ## Datasource Tooling
 
 
-Nordypy lets you easily move manipulate data locally, in S3, and in Redshift.
+Nordypy lets you easily move manipulate data locally, in S3, Redshift, and Teradata.
 
 ---
 
@@ -173,6 +182,7 @@ Nordypy lets you easily move manipulate data locally, in S3, and in Redshift.
 </a>
 
 Analyzes the compression and skew on the specified table in redshift.
+Will NOT work for teradata.
 
 ```python
 nordypy.database_analyze_table(database_key='my_redshift',
@@ -188,7 +198,7 @@ nordypy.database_analyze_table(database_key='my_redshift',
 
 </a>
 
-Returns a DBconnection to the database of your choosing.
+Returns a DBconnection to the database of your choosing. Works for redshift, mysql and teradata.
 
 ```python
 conn = nordypy.database_connect(database_key='my_redshift',
@@ -212,6 +222,7 @@ The Nordypy `database_create_table` method can create a table using two differen
 1. Nordypy can read the data types of pandas dataframe and generate a CREATE statement automatically.
 2. Provide a pre-written CREATE statement.
 
+Will NOT work for teradata.
 
 ```python
 # with a dataframe
@@ -238,7 +249,7 @@ nordypy.database_create_table(create_statement=create,
 
 </a>
 
-Drops table if exists.
+Drops table if exists. Will NOT work for teradata.
 
 ```python
 nordypy.database_drop_table(table_name='schema.my_table',
@@ -255,6 +266,8 @@ nordypy.database_drop_table(table_name='schema.my_table',
 
 This function will execute multiple queries as long as they are each separated by a `';'`. If the final query should return data, that can be specified with `return_data=True`. Additionally, if the data should be returned as a pandas databframe that can be specified with the `as_pandas=True` argument. 
 
+Works for redshift, mysql and teradata.
+
 ```python
 sql = nordypy.read_sql_file('my_queries.sql')
 nordypy.database_execute(database_key='my_redshift',
@@ -269,7 +282,7 @@ nordypy.database_execute(database_key='my_redshift',
 
 </a>
 
-Run a single query and return data as records or as a pandas dataframe. 
+Run a single query and return data as records or as a pandas dataframe. Works for redshift, mysql and teradata.
 
 ```python
 sql = 'select top 10 * from schema.my_table;'
@@ -287,7 +300,7 @@ data = nordypy.database_get_data(database_key='my_redshift',
 
 </a>
 
-Return the column names and data types (optional) from a Redshift table.
+Return the column names and data types (optional) from a Redshift table. Will NOT work for teradata.
 
 ```python
 data = nordypy.database_get_column_names(database_key='my_redshift',
@@ -307,6 +320,8 @@ Insert data into an already existing table. Can insert a full csv, a full
 pandas dataframe, a single tuple of data, or run an insert statement on
 tables already in the database.
 
+Will NOT work for teradata.
+
 ```python
 data = {'A':1, 'B':2, 'C':3, 'D':4}
 nordypy.database_insert(data=data,
@@ -322,7 +337,7 @@ nordypy.database_insert(data=data,
 </a>
 
 Helper function to automatically pull data from a database as a pandas dataframe. 
-Uses `nordypy.database_get_data()` under the hood.
+Uses `nordypy.database_get_data()` under the hood. Works for redshfit, mysql and teradata.
 
 ```python
 nordypy.database_to_pandas(database_key='my_redshift',

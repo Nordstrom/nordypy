@@ -13,7 +13,8 @@ requires=[
           "boto3",
           "pystache",
           "pandas",
-          "pymysql"
+          "pymysql",
+          "teradatasql"
           ]
 classifiers = ["License :: OSI Approved :: Apache Software License"]
 

@@ -16,4 +16,5 @@ pytz==2018.5
 PyYAML==3.12
 s3transfer==0.1.13
 six==1.11.0
+teradatasql==16.20.0.58
 urllib3==1.23

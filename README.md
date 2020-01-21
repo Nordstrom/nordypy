@@ -13,8 +13,51 @@ This package is being developed in conjunction with the R-based packages ElmeR a
 ```bash
 pip install nordypy
 ```
+- [setting up your connections](#setting-up-your-connections)
+
+### Nordypy Functions
+
+#### General Project Tools
+- [initialize_project](#initialize-project)
+- [create_config_file](#create-config-file)
+
+#### Database Functions
+- [database_analyze_table](#database-analyze-table)
+- [database_connect](#database-connect)
+- [database_create_table](#database-create-table)
+- [database_drop_table](#database-drop-table)
+- [database_execute](#database-execute)
+- [database_get_data](#database-get-data)
+- [database_get_column_names](#database-get-column-names)
+- [database_insert](#database-insert)
+- [database_to_pandas](#database-to-pandas)
+- [data_to_redshift](#data-to-redshift)
+- [read_sql_file](#read-sql-file)
+
+#### S3 Functions
+- [pandas_to_s3](#pandas-to-s3)
+- [redshift_to_redshift](#redshift-to-redshift)
+- [redshift_to_s3](#redshift-to-s3)
+- [s3_change_permissions](#s3-change-permissions)
+- [s3_delete](#s3-delete)
+- [s3_download](#s3-download)
+- [s3_download_all](#s3-download-all)
+- [s3_get_bucket](#s3-get-bucket)
+- [s3_get_permissions](#s3-get-permissions)
+- [s3_list_buckets](#s3-list-buckets)
+- [s3_list_objects](#s3-list-objects)
+- [s3_rename_file](#s3-rename-file)
+- [s3_to_pandas](#s3-to-pandas)
+- [s3_upload](#s3-upload)
+
+#### Athena Functions
+- [athena_to_pandas](#athena-to-pandas)
+
+<a name="setting-up-your-connections">
 
 ### Setting up your Database Connections
+
+</a>
 
 Nordypy uses **yaml** files to configure your database connection. You can create your template yaml file by running the following from an ipython session.
 
@@ -73,40 +116,6 @@ my_mysql:
 ```
 Also keep in mind, if you have a secret_name in your yaml, nordypy will use those credentials, and ignore any host, port, dbname, user, password or dbtype that you have in your local yaml file.  If secrets is used, AWS creds must be running in the background, or nordypy must be run on EC2 instance.
 
-### Nordypy Functions
-
-#### General Project Tools
-- [initialize_project](#initialize-project)
-- [create_config_file](#create-config-file)
-
-#### Database Functions
-- [database_analyze_table](#database-analyze-table)
-- [database_connect](#database-connect)
-- [database_create_table](#database-create-table)
-- [database_drop_table](#database-drop-table)
-- [database_execute](#database-execute)
-- [database_get_data](#database-get-data)
-- [database_get_column_names](#database-get-column-names)
-- [database_insert](#database-insert)
-- [database_to_pandas](#database-to-pandas)
-- [data_to_redshift](#data-to-redshift)
-- [read_sql_file](#read-sql-file)
-
-#### S3 Functions
-- [pandas_to_s3](#pandas-to-s3)
-- [redshift_to_redshift](#redshift-to-redshift)
-- [redshift_to_s3](#redshift-to-s3)
-- [s3_change_permissions](#s3-change-permissions)
-- [s3_delete](#s3-delete)
-- [s3_download](#s3-download)
-- [s3_download_all](#s3-download-all)
-- [s3_get_bucket](#s3-get-bucket)
-- [s3_get_permissions](#s3-get-permissions)
-- [s3_list_buckets](#s3-list-buckets)
-- [s3_list_objects](#s3-list-objects)
-- [s3_rename_file](#s3-rename-file)
-- [s3_to_pandas](#s3-to-pandas)
-- [s3_upload](#s3-upload)
 
 #### Athena Functions
 - [athena_to_pandas](#athena-to-pandas)

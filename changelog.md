@@ -1,3 +1,9 @@
+#### Updates Version 2.0.0
+
+- new functions, bug fixes, ....
+
+#### Updates Version 1.3.1
+
 #### Updates Version 1.2.2
 
 - Development structure was changed so that any changes made to the `public-github` branch inside of *gitlab* will automatically flow to `public-github` on Nordstrom's public-facing *github* acccount

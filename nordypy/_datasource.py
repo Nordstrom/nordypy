@@ -2,7 +2,7 @@ import psycopg2
 from psycopg2 import sql
 import teradatasql
 import pymysql
-import os, sys
+import os, sys, re
 import yaml
 import pandas as pd
 from boto3.exceptions import S3UploadFailedError
@@ -44,7 +44,7 @@ def database_analyze_table(database_key=None, yaml_filepath=None, table=None,
     return result
 
 
-def database_connect(database_key=None, yaml_filepath=None):
+def database_connect(database_key=None, yaml_filepath=None, autocommit=True):
     """Return a database connection object. Connect with YAML config or bash
     environment variables. Works for redshift, mysql, and teradata.
 
@@ -100,52 +100,56 @@ def database_connect(database_key=None, yaml_filepath=None):
             print("UserWarning: Update config.yaml with 'dbtype' parameter: ['redshift', 'mysql', 'teradata'] -- ")
         if 'dbtype' in cfg:
             if cfg['dbtype'] == 'mysql':
-                conn = __mysql_connect(cfg)
+                conn = __mysql_connect(cfg, autocommit=autocommit)
             elif cfg['dbtype'] == 'teradata':
                 conn = __teradata_connect(cfg)
             else:
-                conn = __redshift_connect(cfg)
+                conn = __redshift_connect(cfg, autocommit=autocommit)
         else:
             # default to redshift database
-            conn = __redshift_connect(cfg)
+            conn = __redshift_connect(cfg, autocommit=autocommit)
 
     elif database_key:
         try:
             try:
                 # redshift
-                conn = psycopg2.connect(os.environ[database_key])
+                conn = psycopg2.connect(os.environ[database_key], autocommit=autocommit)
             except psycopg2.OperationalError:
                 # mysql
-                conn = pymysql.connect(os.environ[database_key])
+                conn = pymysql.connect(os.environ[database_key], autocommit=autocommit)
         except (KeyError, pymysql.err.OperationalError):
             # for the case where positional arguments were used and the
             # datasource was actually the YAML path
             try:
                 conn = database_connect(yaml_filepath='config.yaml',
-                                        database_key=database_key)
+                                        database_key=database_key,
+                                        autocommit=autocommit)
             except:
                 yaml_filepath = database_key
                 conn = database_connect(yaml_filepath=yaml_filepath,
-                                        database_key=None)
+                                        database_key=None,
+                                        autocommit=autocommit)
     else:
         raise ValueError('Provide a YAML file path or a connection string via a bash_variable')
     return conn
 
-def __redshift_connect(cfg):
-    return psycopg2.connect(host=cfg['host'],
-                            dbname=cfg['dbname'],
-                            password=cfg['password'],
-                            port=cfg['port'],
-                            user=cfg['user']
-                            )
+def __redshift_connect(cfg, autocommit=True):
+    con = psycopg2.connect(host=cfg['host'],
+                           dbname=cfg['dbname'],
+                           password=cfg['password'],
+                           port=cfg['port'],
+                           user=cfg['user'])
+    con.autocommit = autocommit
+    
+    return con
 
-def __mysql_connect(cfg):
+def __mysql_connect(cfg, autocommit=True):
     return pymysql.connect(host=cfg['host'],
                            db=cfg['dbname'],
                            password=cfg['password'],
                            port=cfg['port'],
-                           user=cfg['user']
-                           )
+                           user=cfg['user'],
+                           autocommit=autocommit)
 
 def __teradata_connect(cfg):
     config = {
@@ -392,9 +396,12 @@ def database_execute(database_key=None, yaml_filepath=None, sql=None,
     if ';' not in sqlcode:
         raise ValueError("SQL statements must contain ';'")
 
+    sqlcode = _strip_sql(sqlcode)
+
     if query_group:
         sqlcode = _assign_query_group(size=query_group) + sqlcode
     sql_statements = sqlcode.split(';')[:-1]
+
     # get connection if not there
     if not conn:
         conn = database_connect(database_key=database_key, yaml_filepath=yaml_filepath)
@@ -826,3 +833,12 @@ def _dict_depth(d):
     if isinstance(d, dict):
         return 1 + (max(map(_dict_depth, d.values())) if d else 0)
     return 0
+
+def _strip_sql(sql):
+    """returns sql string stripped of comments and empty lines"""
+
+    sql = re.sub(r"/\*.*?\*/", '', sql, flags=re.DOTALL) # /* multiline comments */
+    sql = re.sub(r"--.*\n", '', sql) # -- single line comments
+    sql = re.sub(r"\n\n+", '\n', sql) # remove empty lines
+
+    return sql

@@ -1,10 +1,11 @@
 import psycopg2
+from psycopg2 import sql
 import teradatasql
 import pymysql
 import os, sys
 import yaml
-from boto3.exceptions import S3UploadFailedError
 import pandas as pd
+from boto3.exceptions import S3UploadFailedError
 from . import _redshift_utils
 from ._s3 import _s3_get_temp_creds
 from ._s3 import pandas_to_s3, s3_to_redshift
@@ -246,19 +247,25 @@ def database_create_table(data=None, table_name='', make_public=True,
                                   database_key='REDSHIFT')
     """
     close_connection = False
-    if not create_statement:
-        create_statement = _create_table_statement(data, table_name=table_name)
+
     if not conn:
         conn = database_connect(database_key=database_key,
                                 yaml_filepath=yaml_filepath)
         close_connection = True
+
+    if not create_statement:
+        create_statement = _create_table_statement(data, table_name=table_name, conn=conn)
+
     cursor = conn.cursor()
+
     try:
         if create_statement.endswith('.sql'):
             create_statement = read_sql_file(create_statement)
+
         cursor.execute(create_statement)
         conn.commit()
         print('{} table created'.format(table_name))
+
         if make_public:
             grant_sql = 'GRANT ALL ON {} TO PUBLIC;'.format(table_name)
             cursor.execute(grant_sql)
@@ -639,6 +646,7 @@ def data_to_redshift(data, table_name, bucket, s3_filepath='temp',
                              s3_filepath='my_data/data_',
                              database_key='REDSHIFT')
     """
+
     if drop_table:
         database_drop_table(table_name=table_name, database_key=database_key,
                             yaml_filepath=yaml_filepath)

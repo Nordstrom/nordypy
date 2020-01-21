@@ -1,6 +1,7 @@
 import math
 import datetime
 import pandas as pd
+from psycopg2 import sql
 
 
 def _assign_query_group(size='default'):
@@ -13,32 +14,58 @@ def _assign_query_group(size='default'):
     print('Using {} query_group'.format(qg_dict[size]))
     return "set query_group to '{}';".format(qg_dict[size])
 
-def _create_table_statement(data,
-                            table_name):
-    # determine type of columns in table and generate create table statement
-    redshift_dtypes = {'float64': 'FLOAT4', 'object': 'VARCHAR',
-                       'int64': 'INT', 'bool': 'BOOL', 'uint8': 'INT',
-                       'datetime64[ns]': 'TIMESTAMP', 'date': 'DATE'}
-    column_data = []
+
+def _create_table_statement(data, table_name, conn):
+    """
+
+    Create a table from a pandas dataframe
+
+    Parameters
+    ----------
+    data : pandas.dataFrame
+    table_name : str
+        Table name for created table
+    conn : psycopg.connect
+
+    Returns
+    -------
+    str
+
+    """
+    
+    redshift_dtypes = {
+        'float64': 'FLOAT8', 'float32': 'FLOAT8',
+        'object': 'VARCHAR',
+        'category': 'VARCHAR',
+        'int8': 'INT2', 'int16': 'INT2', 'int32': 'INT4', 'int64': 'INT8',
+        'uint8': 'INT2', 'uint16': 'INT4', 'uint32': 'INT8', 'uint64': 'INT8',
+        'datetime64[ns]': 'TIMESTAMP', 'date': 'DATE',
+        'bool': 'BOOL',
+    }
+
     # distinguish between dates and datetimes since pandas has dates as objects
+    column_data = list()
+
     for col, dtype in zip(data.columns, data.dtypes):
-        if dtype == str('object'):
+        if dtype == 'object':
             if isinstance(data[col].iloc[0], datetime.date):
-                dtype = 'date'
-        column_data.append((col, redshift_dtypes[str(dtype)]))
-        a = "CREATE TABLE " + table_name + ' ('
-        b = ''
-        for col, dtype in column_data:
-            if dtype == 'VARCHAR':
-                max_length = data[col].str.len().max()
-                max_length = _roundup(max_length * 2)
-                if max_length == 0:
-                    max_length = 10
-                if max_length > 60000:
-                    max_length = 'max'
-                dtype = 'VARCHAR(' + str(max_length) + ')'
-            b = b + col.replace('.', '_') + ' ' + str(dtype) + ','
-    return a + b[:-1] + ');'
+                dtype = 'DATE'
+
+            if redshift_dtypes[str(dtype)] == 'VARCHAR':
+                max_length = _varchar_max_length(data[col].astype(str).str.len().max())
+                dtype = ' VARCHAR(' + str(max_length) + ')'
+        else:
+            dtype = redshift_dtypes[str(dtype)]
+            
+        column_data.extend([sql.Identifier(col), sql.SQL(dtype)])
+
+    create = "CREATE TABLE {}.{} ("
+    create += ', '.join(['{} {}' for i in range(int(len(column_data) / 2))]) + ');'
+    schema, table = table_name.split('.')
+    create = sql.SQL(create).format(sql.Identifier(schema), sql.Identifier(table), *column_data)
+    create_string = create.as_string(conn)
+
+    return create_string
 
 
 def _create_insert_statement(data, table_name):
@@ -153,9 +180,17 @@ def _generate_unload_command(cred_str,
 
 
 # --- HELPER FUNCTIONS ---
-
-
 def _roundup(x):
     if math.isnan(x):
         return 10
     return int(math.ceil(x / 100.0)) * 100
+
+def _varchar_max_length(l):
+    max_length = l
+    max_length = _roundup(max_length * 2)
+    if max_length == 0:
+        max_length = 10
+    if max_length > 60000:
+        max_length = 'max'
+
+    return max_length

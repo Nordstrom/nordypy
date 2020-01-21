@@ -13,7 +13,8 @@ class S3Tests(unittest.TestCase):
 
     def test_s3_get_matching_s3_keys(self):
         bucket = 'nordypy'
-        keys = [key for key in nordypy.get_matching_s3_keys(bucket=bucket)]
+        keys = [key for key in nordypy.get_matching_s3_keys(bucket=bucket, prefix='nordypy')]
+        print(keys)
         assert type(keys) == list 
 
 if __name__ == '__main__':

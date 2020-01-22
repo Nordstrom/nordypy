@@ -20,8 +20,8 @@ from ._s3 import s3_change_permissions
 from ._s3 import s3_get_permissions
 from ._s3 import s3_download_all
 from ._s3 import s3_get
-from ._s3 import get_matching_s3_keys
-from ._s3 import get_matching_s3_objects
+from ._s3 import s3_get_matching_keys
+from ._s3 import s3_get_matching_objects
 # redshift functions
 from ._datasource import database_analyze_table
 from ._datasource import database_connect
@@ -47,7 +47,7 @@ from ._secret import _get_secret
 # knowledge repo functions
 from ._knowledge_repo_utils import render_post
 
-__version__ = '1.3.1'
+__version__ = '2.0.0'
 
 __all__ = ["_datasource", "_init_methods", "_knowledge_repo_utils",
            "_nordstrom_rock_it", "_redshift_utils", "_s3", "_athena"

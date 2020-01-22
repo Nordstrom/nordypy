@@ -17,6 +17,11 @@ def athena_to_pandas(sql, bucket, s3_filepath=None,
                      profile_name='nordstrom-federated', 
                      region_name='us-west-2'):
     """
+    Run a query on an athena table that returns data to a local pandas dataframe. 
+    The bucket and filepath is the destination where the query result will reside 
+    prior to being pulled as a pandas dataframe. If no s3_filepath is specified, 
+    a temporary filepath will be written to then destoyed after the dataframe is pulled. 
+    
     Parameters
     ----------
     sql : str [REQUIRED]

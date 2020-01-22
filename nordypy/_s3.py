@@ -888,7 +888,7 @@ def s3_get_permissions(bucket, s3_filepath, region_name='us-west-2',
     possible_current_acl = ['aws-exec-read']
     return possible_current_acl, grants
 
-def get_matching_s3_objects(bucket, prefix="", suffix="", 
+def s3_get_matching_objects(bucket, prefix="", suffix="", 
                             region_name='us-west-2', environment=None, profile_name='nordstrom-federated'):
     """
     Generate objects in an S3 bucket.
@@ -911,7 +911,7 @@ def get_matching_s3_objects(bucket, prefix="", suffix="",
 
     Example Use:
     ------------
-    for obj in get_matching_s3_objects(bucket='nordypy', prefix='temp'):
+    for obj in s3_get_matching_objects(bucket='nordypy', prefix='temp'):
         print(obj['Size'])
     """
     s3 = _s3_create_session(region_name=region_name, environment=environment, profile_name=profile_name).client('s3')
@@ -942,7 +942,7 @@ def get_matching_s3_objects(bucket, prefix="", suffix="",
                     yield obj
 
 
-def get_matching_s3_keys(bucket, prefix="", suffix="",
+def s3_get_matching_keys(bucket, prefix="", suffix="",
                          region_name='us-west-2', environment=None, profile_name='nordstrom-federated'):
     """
     Generate keys in an S3 bucket matching certain criteria.
@@ -965,8 +965,8 @@ def get_matching_s3_keys(bucket, prefix="", suffix="",
         
     Example Use:
     ------------
-    all_keys_in_bucket = [k for k in get_matching_s3_keys(bucket='nordypy)]
+    all_keys_in_bucket = [k for k in s3_get_matching_keys(bucket='nordypy)]
     """
-    for obj in get_matching_s3_objects(bucket, prefix, suffix):
+    for obj in s3_get_matching_objects(bucket, prefix, suffix):
         yield obj["Key"]
 

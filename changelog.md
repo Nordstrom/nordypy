@@ -34,7 +34,7 @@ All notable changes to this project will be documented in this file.
 
 - Development structure was changed so that any changes made to the `public-github` branch inside of *gitlab* will automatically flow to `public-github` on Nordstrom's public-facing *github* acccount (MR !49)
 
-## Version 1.2.1 -2019-02-11
+## Version 1.2.1 - 2019-02-11
 
 ### Changed
 

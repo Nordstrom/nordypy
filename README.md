@@ -761,5 +761,6 @@ nordypy.render_post(file_to_render='my_algorithm_doc.md',
 - Nick Buker
 - Gina Schmalzle
 - Nima Maghoul
+- Josh Morton
 
 Please direct questions, bugs, and feature requests to Aaron Lichtner (aaron.lichtner@nordstrom.com)

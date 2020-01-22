@@ -32,6 +32,7 @@ The Nordypy package is a set of tools to make python-based analysis and data sci
 - [database_get_data](#database-get-data)
 - [database_get_column_names](#database-get-column-names)
 - [database_insert](#database-insert)
+- [database_list_tables](#database-list-tables)
 - [database_to_pandas](#database-to-pandas)
 - [data_to_redshift](#data-to-redshift)
 - [read_sql_file](#read-sql-file)
@@ -338,6 +339,22 @@ nordypy.database_insert(data=data,
                         database_key='my_redshift',
                         yaml_filepath='config.yaml',
                         table_name='schema.my_table')
+```
+---
+
+<a name=“database-list-tables”>
+
+### `nordypy.database_list_tables()`
+
+</a>
+Return table names with the schema and tableowner from Redshift based on search criteria.
+
+```python
+tables = nordypy.database_list_tables(schemaname='my_schema',
+                                    tableowner='owner',
+                                    searchstring=None,
+                                    database_key='my_redshift',
+                                    yaml_filepath='config.yaml')
 ```
 ---
 <a name="database-to-pandas">

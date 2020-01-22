@@ -1,19 +1,21 @@
 # Nordypy
 
-The Nordypy package is a set of tools to make python-based analysis and data science at Nordstrom more streamlined and consistent.
-This package is being developed in conjunction with the R-based packages ElmeR and nordyR. This is made for the public-facing version on github.
+The Nordypy package is a set of tools to make python-based analysis and data science at Nordstrom more streamlined and consistent. This package is made for the public-facing version in github and PyPi.
 
-## What can Nordypy do for you
-- Manipulate data on your local system, Redshift, MySQL, Teradata, and in S3
+## What can it do?
+- Manipulate data on your local system, Redshift, MySQL, Teradata, Athena, and in S3
 - Create a fresh repo structure with folders, readme, config.yaml, .gitignore, and more...
 - Render jupyter notebooks and markdown for the Nordstrom knowledge-repo.
 
-### Installing Nordypy
+---
+### Getting Started
 
-```bash
-pip install nordypy
-```
-- [setting up your connections](#setting-up-your-connections)
+```bash 
+  pip install nordypy
+  ```
+[Setting up your connections](#setting-up-your-connections)
+
+---
 
 ### Nordypy Functions
 
@@ -43,6 +45,8 @@ pip install nordypy
 - [s3_download](#s3-download)
 - [s3_download_all](#s3-download-all)
 - [s3_get_bucket](#s3-get-bucket)
+- [s3_get_matching_keys](#s3-get-matching-keys)
+- [s3_get_matching_objects](#s3-get-matching-objects)
 - [s3_get_permissions](#s3-get-permissions)
 - [s3_list_buckets](#s3-list-buckets)
 - [s3_list_objects](#s3-list-objects)
@@ -53,9 +57,20 @@ pip install nordypy
 #### Athena Functions
 - [athena_to_pandas](#athena-to-pandas)
 
+#### Knowledge Repo Functions
+- [render_post](#render-post)
+
+#### Upcoming Functions
+- Dynamo Functions
+- Report Templating
+- One pagers Export
+- Plotting Style Presets
+
 <a name="setting-up-your-connections">
 
-### Setting up your Database Connections
+---
+
+## Setting up your Database Connections
 
 </a>
 
@@ -97,7 +112,7 @@ my_teradata:
 
 ```
 
-`host` refers to the host address where the database can be found. `port` should be the database port. `dbname` is the name of the database you are connecting to. `user` should be your username of service account name. `password` is your account's passoword. Finally, `dbtype` refers to the type of database it is. Currently, `redshift` and `mysql` are supported as far as relational databases.
+`host` refers to the host address where the database can be found. `port` should be the database port. `dbname` is the name of the database you are connecting to. `user` should be your username of service account name. `password` is your account's passoword. Finally, `dbtype` refers to the type of database it is. Currently, `redshift`, `mysql` and `teradata` are supported.
 
 Don't want to keep your user name and password in plain text on some random config file?  Use AWS secret manager! Directions:
 
@@ -115,20 +130,6 @@ my_mysql:
   region_name: us-west-2
 ```
 Also keep in mind, if you have a secret_name in your yaml, nordypy will use those credentials, and ignore any host, port, dbname, user, password or dbtype that you have in your local yaml file.  If secrets is used, AWS creds must be running in the background, or nordypy must be run on EC2 instance.
-
-
-#### Athena Functions
-- [athena_to_pandas](#athena-to-pandas)
-
-#### Knowledge Repo Functions
-- [render_post](#render-post)
-
-#### Upcoming Functions
-- Dynamo Functions
-- Report Templating
-- One pagers Export
-- Plotting Style Presets
-
 
 ## Starting an Analytics or Data Science Project
 Executing analytics requests within a structured environment can reduce time spent on mundane setup tasks, promotes good practices, facilitates collaboration, and is critical to reproducible research. You can use the `nordypy.initialize_project()` function to add boilerplate files and folders to any project folder (defaults to the current working directory).
@@ -174,13 +175,13 @@ Creates a template `config.yaml` file that contains your database connections.  
 ```python
 nordypy.create_config_file(path='~/connections/', ask_me=False)
 ```
-path specifies the path you would like the config file.  If ask_me = False will copy a default template that you will need to modify.  If ask_me = True, then you will be asked a few questions about your credentials, and the config file will be automagically generated.  
+path specifies the path you would like the config file.  If `ask_me = False` will copy a default template that you will need to modify.  If `ask_me = True`, then you will be asked a few questions about your credentials, and the config file will be automagically generated.  
 
 
 ## Datasource Tooling
 
 
-Nordypy lets you easily move manipulate data locally, in S3, Redshift, and Teradata.
+Nordypy lets you easily move manipulate data locally, in S3, Redshift, MySQL, and Teradata.
 
 ---
 
@@ -542,6 +543,34 @@ Gain access to an S3 bucket object.
 ```python
 # with aws-okta running
 bucket = nordypy.s3_get_bucket(bucket='mybucket')
+```
+
+---
+<a name="s3-get-matching-keys">
+
+### `nordypy.s3_get_matching_keys()`
+
+</a>
+Generator to return all keys in an S3 bucket matching certain criteria. You can use prefixes and suffixes to filter down the data. Use with caution if your bucket contains a lot of objects.
+
+```python
+# with aws-okta running
+bucket = 'nordypy'
+keys = [key for key in nordypy.s3_get_matching_keys(bucket=bucket, prefix='nordypy')]
+```
+
+---
+<a name="s3-get-matching-objects">
+
+### `nordypy.s3_get_matching_objects()`
+
+</a>
+Generator to return all s3 objects in an S3 bucket matching certain criteria. You can use prefixes and suffixes to filter down the data. Use with caution if your bucket contains a lot of objects.
+
+```python
+# with aws-okta running
+bucket = 'nordypy'
+objects = [obj for obj in nordypy.s3_get_matching_objects(bucket=bucket, prefix='nordypy')]
 ```
 ---
 

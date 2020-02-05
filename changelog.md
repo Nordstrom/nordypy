@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-- Update the teradatasql version to 16.20.0.59 to solve the connection bug from docker
+- Update the teradatasql version to 16.20.0.59 to solve the connection bug from docker (MR !68)
 
 ## Version 2.0.0 - 2020-01-22
 

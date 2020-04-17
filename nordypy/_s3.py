@@ -783,6 +783,7 @@ def s3_upload(bucket,
     # multipart_threshold and multipart_chunksize defaults = Amazon defaults
     config = TransferConfig(multipart_threshold=multipart_threshold,
                             multipart_chunksize=multipart_chunksize)
+                            
     if '*' in local_filepath:
         items = glob.glob(local_filepath)
         # filter out directories
@@ -805,6 +806,112 @@ def s3_upload(bucket,
             else:
                 raise e
         print('{} upload complete'.format(filepath))
+
+
+def s3_upload_test(bucket,
+              s3_filepath,
+              local_filepath,
+              permission=None,
+              region_name='us-west-2',
+              environment=None,
+              profile_name=None,
+              multipart_threshold=8388608,
+              multipart_chunksize=8388608):
+    """
+    Uploads a file to an S3 bucket, allows you to set permssions on upload.
+
+    If running locally you should have the aws-okta running.
+
+    Parameters
+    ----------
+    bucket : str
+        S3 bucket name
+    s3_filepath : str or list
+        path and filename within the bucket for the file to be uploaded
+    local_filepath : str or list
+        path and filename for file to be uploaded
+    permission : str
+        'private'|'public-read'|'public-read-write'|'authenticated-read'
+        'aws-exec-read'|'bucket-owner-read'|'bucket-owner-full-control'
+    region_name : str
+        name of AWS region (default value 'us-west-2')
+    environment : str
+        'aws' or 'local' depending on whether running locally or in AWS
+    profile_name : str
+        profile name for credential purposes when running locally,
+        typically 'nordstrom-federated'
+    multipart_threshold : int
+        minimum filesize to initiate multipart upload
+    multipart_chunksize : int
+        chunksize for multipart upload
+
+    Returns
+    -------
+    None
+
+    Example use
+    -----------
+    # to upload a single file
+    s3_upload(bucket='mybucket',
+              s3_filepath='tmp/myfile.csv',
+              filepath='..data/myfile.csv',
+              environment='local')
+
+    # to upload all files in a directory (will not upload contents of subdirectories)
+    s3_upload(bucket='mybucket',
+              s3_filepath='tmp/',
+              filepath='..data/*',
+              environment='local')
+
+    # to upload all files in a directory matching a wildcard (will not upload contents of subdirectories)
+    s3_upload(bucket='mybucket',
+              s3_filepath='tmp/',
+              filepath='../data/*.csv')
+    """
+
+    # TODO check that permission is a proper type
+    if (type(s3_filepath) == list): # Multiple s3 locations
+        if (type(local_filepath) == list):
+            if len(s3_filepath) != len(local_filepath):
+                raise ValueError('Length of s3_filepath argument must be equal to the length of local_filepath argument')
+        else:
+            raise ValueError('If the \'s3_filepath\' argument is a list, \'local_filepath\' argument must also be a list of equal length')
+    elif type(s3_filepath) == str: # Single s3 location
+        if type(local_filepath) == list:
+            s3_filepath = [s3_filepath]*len(local_filepath)
+        if type(local_filepath) == str:
+            s3_filepath = [s3_filepath]
+            local_filepath = [local_filepath]
+    else:
+        raise ValueError("s3_filepath datatype not supported.")
+
+    mybucket = s3_get_bucket(bucket, region_name, environment, profile_name)
+    # multipart_threshold and multipart_chunksize defaults = Amazon defaults
+    config = TransferConfig(multipart_threshold=multipart_threshold,
+                            multipart_chunksize=multipart_chunksize)
+
+    # Making sure that all the local file paths are valid
+    for p in local_filepath:
+        if not os.path.isfile(p):
+            raise ValueError("\'{}\' is not a valid local file path".format(p))
+    filenames = [f.split('/')[-1] for f in local_filepath]
+
+    for i, filepath in enumerate(local_filepath):
+        try:
+            print(s3_filepath[i] + filenames[i])
+            mybucket.upload_file(filepath,
+                                 s3_filepath[i] + filenames[i],
+                                 Config=config)
+            if permission:
+                obj = mybucket.Object(s3_filepath + filenames[i])
+                obj.Acl().put(ACL=permission)
+        except boto3.exceptions.S3UploadFailedError as e:
+            if '(ExpiredToken)' in str(e):
+                raise S3UploadFailedError('If running locally, you must run aws-okta in the background. ' + str(e))
+            else:
+                raise e
+        print('{} upload complete'.format(filepath))
+        return True
 
 
 def s3_change_permissions(bucket, s3_filepath, permission=None,

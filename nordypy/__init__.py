@@ -11,6 +11,7 @@ from ._s3 import s3_get_bucket
 from ._s3 import s3_delete
 from ._s3 import s3_download
 from ._s3 import s3_upload
+from ._s3 import s3_upload_test
 from ._s3 import s3_rename_file
 from ._s3 import pandas_to_s3
 from ._s3 import s3_to_pandas
@@ -47,7 +48,7 @@ from ._secret import _get_secret
 # knowledge repo functions
 from ._knowledge_repo_utils import render_post
 
-__version__ = '2.0.1'
+__version__ = '2.0.2'
 
 __all__ = ["_datasource", "_init_methods", "_knowledge_repo_utils",
            "_nordstrom_rock_it", "_redshift_utils", "_s3", "_athena"

@@ -19,32 +19,32 @@ class S3Tests(unittest.TestCase):
 
     def test_upload_list(self):
         bucket = 'data-scientist-share'
-        s3_filepath = ['/data/test/', '/data/test1/']
-        local_filepaths = ['abc2.txt', 'abc1.txt']
+        s3_filepath = ['data/test/', 'data/test1/']
+        local_filepaths = ['abc2.txt', 'sales_events.csv']
         self.assertEqual(nordypy.s3_upload_test(bucket, s3_filepath, local_filepaths), True)
 
     def test_upload_single_file(self):
         bucket = 'data-scientist-share'
-        s3_filepath = '/data/test/'
+        s3_filepath = 'data/test/'
         local_filepath = 'abc3.txt'
         self.assertEqual(nordypy.s3_upload_test(bucket, s3_filepath, local_filepath), True)
 
     def test_upload_single_s3path_multiple_files(self):
         bucket = 'data-scientist-share'
-        s3_filepath = '/data/test/'
+        s3_filepath = 'data/test/'
         local_filepaths = ['abc4.txt', 'abc5.txt']
         self.assertEqual(nordypy.s3_upload_test(bucket, s3_filepath, local_filepaths), True)
 
     def test_length_check(self):
         bucket = 'data-scientist-share'
-        s3_filepath = ['/data/test']
+        s3_filepath = ['data/test']
         local_filepaths = ['abc.txt', 'abc1.txt']
         with self.assertRaises(ValueError):
             nordypy.s3_upload_test(bucket, s3_filepath, local_filepaths)
 
     def test_local_filepath_valid(self):
         bucket = 'data-scientist-share'
-        s3_filepath = ['/data/test']
+        s3_filepath = ['data/test']
         local_filepaths = ['aabc.txt']
         with self.assertRaises(ValueError):
             nordypy.s3_upload_test(bucket, s3_filepath, local_filepaths)

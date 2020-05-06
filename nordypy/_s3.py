@@ -904,8 +904,10 @@ def s3_upload_test(bucket,
             mybucket.upload_file(filepath,
                                  obj_key,
                                  Config=config)
+            permission = 'bucket-owner-full-control'
             if permission:
                 obj = mybucket.Object(obj_key)
+                print("\n", obj_key)
                 obj.Acl().put(ACL=permission)
 
         except boto3.exceptions.S3UploadFailedError as e:

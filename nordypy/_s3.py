@@ -733,7 +733,7 @@ def s3_upload(bucket,
     bucket : str
         S3 bucket name
     s3_folderpath : str or list
-        path to the folder within the bucket to upload the file
+        path to the folder within the bucket to upload the file, can be a list of s3 folder locations as well
     local_filepath : str or list
         path to the file on the local system to be uploaded (with the file name)
     permission : str
@@ -759,20 +759,20 @@ def s3_upload(bucket,
     -----------
     # to upload a single file
     s3_upload(bucket='mybucket',
-              s3_folderpath='tmp/myfile.csv',
-              filepath='..data/myfile.csv',
-              environment='local')
+              s3_folderpath='tmp/',
+              filepath='..data/myfile.csv')
 
     # to upload a list of files to different s3 locations
     s3_upload(bucket='mybucket',
               s3_folderpath=['tmp/', 'tmp/data/'],
-              filepath=['..data/example.csv', '../data/test.csv'],
-              environment='local')
+              filepath=['example.csv', 'data.csv'])
+        # files will appear at tmp/example.csv and tmp/data/data.csv
 
     # to upload multiple files to the same s3 location)
     s3_upload(bucket='mybucket',
               s3_folderpath='tmp/',
-              filepath=['..data/example.csv', '../data/test.csv'])
+              filepath=['example.csv', 'data.csv'])
+    # files will appear at tmp/example.csv and tmp/data.csv
     """
 
     # TODO check that permission is a proper type

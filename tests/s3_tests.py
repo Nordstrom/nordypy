@@ -26,7 +26,7 @@ class S3Tests(unittest.TestCase):
             if not os.path.isfile(f):
                 open(f, 'w').close()
 
-        self.assertEqual(nordypy.s3_upload_test(bucket = bucket, 
+        self.assertEqual(nordypy.s3_upload(bucket = bucket, 
                                                 s3_folderpath = s3_folderpath, 
                                                 local_filepath = local_filepath), True)
         # Removing dummy files
@@ -41,7 +41,7 @@ class S3Tests(unittest.TestCase):
         if not os.path.isfile(local_filepath):
             open(local_filepath, 'w').close()
         
-        self.assertEqual(nordypy.s3_upload_test(bucket = bucket, 
+        self.assertEqual(nordypy.s3_upload(bucket = bucket, 
                                                 s3_folderpath = s3_folderpath, 
                                                 local_filepath = local_filepath), True)
         # Remove dummy file
@@ -56,7 +56,7 @@ class S3Tests(unittest.TestCase):
             if not os.path.isfile(f):
                 open(f, 'w').close()
 
-        self.assertEqual(nordypy.s3_upload_test(bucket = bucket, 
+        self.assertEqual(nordypy.s3_upload(bucket = bucket, 
                                                 s3_folderpath = s3_folderpath, 
                                                 local_filepath = local_filepath), True)
         # Remove dummy files
@@ -68,7 +68,7 @@ class S3Tests(unittest.TestCase):
         s3_folderpath = ['data/test']
         local_filepath = ['abc.txt', 'abc1.txt']
         with self.assertRaises(ValueError):
-            nordypy.s3_upload_test(bucket = bucket, 
+            nordypy.s3_upload(bucket = bucket, 
                                    s3_folderpath = s3_folderpath, 
                                    local_filepath = local_filepath)
 
@@ -77,7 +77,7 @@ class S3Tests(unittest.TestCase):
         s3_folderpath = ['data/test']
         local_filepath = ['aabc.txt']
         with self.assertRaises(ValueError):
-            nordypy.s3_upload_test(bucket = bucket, 
+            nordypy.s3_upload(bucket = bucket, 
                                    s3_folderpath = s3_folderpath, 
                                    local_filepath = local_filepath)
 

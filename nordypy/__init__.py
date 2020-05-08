@@ -11,7 +11,6 @@ from ._s3 import s3_get_bucket
 from ._s3 import s3_delete
 from ._s3 import s3_download
 from ._s3 import s3_upload
-from ._s3 import s3_upload_test
 from ._s3 import s3_rename_file
 from ._s3 import pandas_to_s3
 from ._s3 import s3_to_pandas

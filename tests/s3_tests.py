@@ -32,8 +32,8 @@ class S3Tests(unittest.TestCase):
         for f in local_filepath:
             if not os.path.isfile(f):
                 open(f, 'w').close()
-
-        self.assertEqual(nordypy.s3_upload(bucket = bucket, 
+        with self.assertRaises(ValueError):
+            self.assertEqual(nordypy.s3_upload(bucket = bucket, 
                                                 s3_folderpath = s3_folderpath, 
                                                 local_filepath = local_filepath), True)
         # Removing dummy files
@@ -70,7 +70,7 @@ class S3Tests(unittest.TestCase):
         for l in local_filepath:
             os.remove(l)
 
-    def test_length_check(self):
+    def test_s3_folderpath_datatype_check(self):
         bucket = 'data-scientist-share'
         s3_folderpath = ['data/test']
         local_filepath = ['abc.txt', 'abc1.txt']

@@ -739,9 +739,10 @@ def s3_upload(bucket,
         'private'|'public-read'|'public-read-write'|'authenticated-read'
         'aws-exec-read'|'bucket-owner-read'|'bucket-owner-full-control'        
     s3_filepath : str or list
-        path to the file within the bucket to upload the file
-    s3_folderpath : str or list
-        path to the folder within the bucket to upload the file
+        path to the file or list of files (with desired file names) in s3 (DO NOT USE if using s3_folderpath)
+    s3_folderpath : str
+        path to the folder within the bucket to upload the file(s) (DO NOT USE if using s3_filepath)
+        s3 files will maintain local file names
     region_name : str
         name of AWS region (default value 'us-west-2')
     environment : str
@@ -760,44 +761,44 @@ def s3_upload(bucket,
 
     Example use
     -----------
-    # to upload a single file
-    s3_upload(bucket='mybucket',
-              s3_folderpath='tmp/',
-              filepath='..data/myfile.csv')
+    # one local file to renamed s3 file
+    nordypy.s3_upload(bucket='mybucket',
+                    s3_filepath='cloud.txt',
+                    local_filepath='data/local.txt',
+                    permission='public-read')
 
-    # to upload a list of files to different s3 locations
-    s3_upload(bucket='mybucket',
-              s3_folderpath=['tmp/', 'tmp/data/'],
-              filepath=['example.csv', 'data.csv'])
-        # files will appear at tmp/example.csv and tmp/data/data.csv
+    # list of local files to list of renamed s3 files
+    nordypy.s3_upload(bucket='mybucket',
+                    s3_filepath=['cloud.txt', 'cloud1.txt'],
+                    local_filepath=['data/local.txt', 'data/local1.txt'])
 
-    # to upload multiple files to the same s3 location)
-    s3_upload(bucket='mybucket',
-              s3_folderpath='tmp/',
-              filepath=['example.csv', 'data.csv'])
-    # files will appear at tmp/example.csv and tmp/data.csv
+    # one local file to one s3 folder (ex. in the use case below, s3 file path will be 'cloud/data/local.txt')
+    nordypy.s3_upload(bucket='mybucket',
+                    s3_folderpath='cloud/',
+                    local_filepath='data/local.txt',
+                    permission='public-read')
+
+    # list of local files to one s3 folder (ex. s3 files will be uploaded as ['cloud/data/local.txt', 'cloud/data/local1.txt'])
+    nordypy.s3_upload(bucket='mybucket',
+                    s3_folderpath='cloud/',
+                    local_filepath=['data/local.txt', 'data/local1.txt'])
     """
 
     # TODO check that permission is a proper type
     if not s3_filepath:
         if not s3_folderpath:            
             raise ValueError("Either s3_folderpath or s3_filepath argument must be specified.")
-
-        if (type(s3_folderpath) == list): # Multiple s3 locations
-            if (type(local_filepath) == list):
-                if len(s3_folderpath) != len(local_filepath):
-                    raise ValueError('Length of s3_folderpath argument must be equal to the length of local_filepath argument')
-            else:
-                raise ValueError('If the \'s3_folderpath\' argument is a list, \'local_filepath\' argument must also be a list of equal length')
-        elif type(s3_folderpath) == str: # Single s3 location
+        if type(s3_folderpath) == str: # Single s3 location
             if type(local_filepath) == list:
                 s3_folderpath = [s3_folderpath]*len(local_filepath)
             if type(local_filepath) == str:
                 s3_folderpath = [s3_folderpath]
                 local_filepath = [local_filepath]
         else:
-            raise ValueError("s3_folderpath datatype not supported.")
+            raise ValueError("s3_folderpath must be a string...")
     else: # if s3_filepath is not null
+        if s3_folderpath:            
+            raise ValueError("Either one of s3_folderpath or s3_filepath argument should be specified.")
         if (type(s3_filepath) == list): # Multiple s3 locations
             if (type(local_filepath) == list):
                 if len(s3_filepath) != len(local_filepath):

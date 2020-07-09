@@ -688,10 +688,29 @@ Upload a file to S3.
 
 ```python
 # while running aws-okta
+
+# one local file to renamed s3 file
 nordypy.s3_upload(bucket='mybucket',
                   s3_filepath='cloud.txt',
                   local_filepath='data/local.txt',
                   permission='public-read')
+
+# list of local files to list of renamed s3 files
+nordypy.s3_upload(bucket='mybucket',
+                  s3_filepath=['cloud.txt', 'cloud1.txt'],
+                  local_filepath=['data/local.txt', 'data/local1.txt'])
+
+# one local file to one s3 folder (ex. in the use case below, s3 file path will be 'cloud/data/local.txt')
+nordypy.s3_upload(bucket='mybucket',
+                  s3_folderpath='cloud/',
+                  local_filepath='data/local.txt',
+                  permission='public-read')
+
+# list of local files to one s3 folder (ex. s3 files will be uploaded as ['cloud/data/local.txt', 'cloud/data/local1.txt'])
+nordypy.s3_upload(bucket='mybucket',
+                  s3_folderpath='cloud/',
+                  local_filepath=['data/local.txt', 'data/local1.txt'])
+
 ```
 
 ---

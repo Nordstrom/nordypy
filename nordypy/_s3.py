@@ -426,6 +426,7 @@ def s3_get_bucket(bucket,
     session = _s3_create_session(region_name, environment, profile_name)
     s3 = session.resource('s3')
     mybucket = s3.Bucket(bucket)
+    
     try:
         s3.meta.client.head_bucket(Bucket=bucket)
     except botocore.exceptions.ClientError as e:
@@ -713,18 +714,18 @@ def s3_download(bucket,
                 raise e
         print('{} download complete'.format(key))
 
-
-def s3_upload(bucket,
-              s3_filepath,
+def s3_upload(bucket,              
               local_filepath,
               permission=None,
+              s3_filepath = None,              
+              s3_folderpath = None,
               region_name='us-west-2',
               environment=None,
               profile_name=None,
               multipart_threshold=8388608,
               multipart_chunksize=8388608):
     """
-    Uploads a file to an S3 bucket, allows you to set permssions on upload.
+    Uploads a file or a list of files to an S3 bucket, allows you to set permssions on upload.
 
     If running locally you should have the aws-okta running.
 
@@ -732,13 +733,16 @@ def s3_upload(bucket,
     ----------
     bucket : str
         S3 bucket name
-    s3_filepath : str or list
-        path and filename within the bucket for the file to be uploaded
     local_filepath : str or list
-        path and filename for file to be uploaded
+        path to the file on the local system to be uploaded (with the file name)
     permission : str
         'private'|'public-read'|'public-read-write'|'authenticated-read'
-        'aws-exec-read'|'bucket-owner-read'|'bucket-owner-full-control'
+        'aws-exec-read'|'bucket-owner-read'|'bucket-owner-full-control'        
+    s3_filepath : str or list
+        path to the file or list of files (with desired file names) in s3 (DO NOT USE if using s3_folderpath)
+    s3_folderpath : str
+        path to the folder within the bucket to upload the file(s) (DO NOT USE if using s3_filepath)
+        s3 files will maintain local file names
     region_name : str
         name of AWS region (default value 'us-west-2')
     environment : str
@@ -757,54 +761,91 @@ def s3_upload(bucket,
 
     Example use
     -----------
-    # to upload a single file
-    s3_upload(bucket='mybucket',
-              s3_filepath='tmp/myfile.csv',
-              filepath='..data/myfile.csv',
-              environment='local')
+    # one local file to renamed s3 file
+    nordypy.s3_upload(bucket='mybucket',
+                    s3_filepath='cloud.txt',
+                    local_filepath='data/local.txt',
+                    permission='public-read')
 
-    # to upload all files in a directory (will not upload contents of subdirectories)
-    s3_upload(bucket='mybucket',
-              s3_filepath='tmp/',
-              filepath='..data/*',
-              environment='local')
+    # list of local files to list of renamed s3 files
+    nordypy.s3_upload(bucket='mybucket',
+                    s3_filepath=['cloud.txt', 'cloud1.txt'],
+                    local_filepath=['data/local.txt', 'data/local1.txt'])
 
-    # to upload all files in a directory matching a wildcard (will not upload contents of subdirectories)
-    s3_upload(bucket='mybucket',
-              s3_filepath='tmp/',
-              filepath='../data/*.csv')
+    # one local file to one s3 folder (ex. in the use case below, s3 file path will be 'cloud/data/local.txt')
+    nordypy.s3_upload(bucket='mybucket',
+                    s3_folderpath='cloud/',
+                    local_filepath='data/local.txt',
+                    permission='public-read')
+
+    # list of local files to one s3 folder (ex. s3 files will be uploaded as ['cloud/data/local.txt', 'cloud/data/local1.txt'])
+    nordypy.s3_upload(bucket='mybucket',
+                    s3_folderpath='cloud/',
+                    local_filepath=['data/local.txt', 'data/local1.txt'])
     """
+
     # TODO check that permission is a proper type
-    if type(s3_filepath) == list:
-        if len(s3_filepath) != len(local_filepath):
-            raise ValueError('Length of s3_filepath arguments must equal length of local_filepath arguments')
+    if not s3_filepath:
+        if not s3_folderpath:            
+            raise ValueError("Either s3_folderpath or s3_filepath argument must be specified.")
+        if type(s3_folderpath) == str: # Single s3 location
+            if type(local_filepath) == list:
+                s3_folderpath = [s3_folderpath]*len(local_filepath)
+            if type(local_filepath) == str:
+                s3_folderpath = [s3_folderpath]
+                local_filepath = [local_filepath]
+        else:
+            raise ValueError("s3_folderpath must be a string...")
+    else: # if s3_filepath is not null
+        if s3_folderpath:            
+            raise ValueError("Either one of s3_folderpath or s3_filepath argument should be specified.")
+        if (type(s3_filepath) == list): # Multiple s3 locations
+            if (type(local_filepath) == list):
+                if len(s3_filepath) != len(local_filepath):
+                    raise ValueError('Length of s3_folderpath argument must be equal to the length of local_filepath argument')
+            else:
+                raise ValueError('If the \'s3_filepath\' argument is a list, \'local_filepath\' argument must also be a list of equal length')
+        elif type(s3_filepath) == str: # Single s3 location            
+            if type(local_filepath) == str:
+                s3_filepath = [s3_filepath]
+                local_filepath = [local_filepath]            
+        else:
+            raise ValueError("s3_filepath datatype not supported.")
 
     mybucket = s3_get_bucket(bucket, region_name, environment, profile_name)
     # multipart_threshold and multipart_chunksize defaults = Amazon defaults
     config = TransferConfig(multipart_threshold=multipart_threshold,
                             multipart_chunksize=multipart_chunksize)
-    if '*' in local_filepath:
-        items = glob.glob(local_filepath)
-        # filter out directories
-        filepaths = [item for item in items if os.path.isfile(item)]
-        filenames = [f.split('/')[-1] for f in filepaths]
-    else:
-        filepaths = [local_filepath]
-        filenames = ['']
-    for i, filepath in enumerate(filepaths):
+
+    # Making sure that all the local file paths are valid
+    for p in local_filepath:
+        if not os.path.isfile(p):
+            raise ValueError(f"\'{p}\' is not a valid local file path")
+    filenames = [f.split('/')[-1] for f in local_filepath]
+
+    for i, filepath in enumerate(local_filepath):
         try:
+            if s3_folderpath:
+                obj_key = os.path.join(s3_folderpath[i], filenames[i])
+            else:
+                obj_key = s3_filepath[i]
+
+            print(f"upload in progress for {obj_key}")
             mybucket.upload_file(filepath,
-                                 s3_filepath + filenames[i],
+                                 obj_key,
                                  Config=config)
+            permission = 'bucket-owner-full-control'
             if permission:
-                obj = mybucket.Object(s3_filepath + filenames[i])
+                obj = mybucket.Object(obj_key)
                 obj.Acl().put(ACL=permission)
+
         except boto3.exceptions.S3UploadFailedError as e:
             if '(ExpiredToken)' in str(e):
                 raise S3UploadFailedError('If running locally, you must run aws-okta in the background. ' + str(e))
             else:
                 raise e
-        print('{} upload complete'.format(filepath))
+        print(f'{filepath} upload complete')
+    return True
 
 
 def s3_change_permissions(bucket, s3_filepath, permission=None,

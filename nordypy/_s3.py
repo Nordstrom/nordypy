@@ -714,10 +714,11 @@ def s3_download(bucket,
                 raise e
         print('{} download complete'.format(key))
 
-def s3_upload(bucket,
-              s3_folderpath,
+def s3_upload(bucket,              
               local_filepath,
               permission=None,
+              s3_filepath = None,              
+              s3_folderpath = None,
               region_name='us-west-2',
               environment=None,
               profile_name=None,
@@ -732,13 +733,15 @@ def s3_upload(bucket,
     ----------
     bucket : str
         S3 bucket name
-    s3_folderpath : str or list
-        path to the folder within the bucket to upload the file, can be a list of s3 folder locations as well
     local_filepath : str or list
         path to the file on the local system to be uploaded (with the file name)
     permission : str
         'private'|'public-read'|'public-read-write'|'authenticated-read'
-        'aws-exec-read'|'bucket-owner-read'|'bucket-owner-full-control'
+        'aws-exec-read'|'bucket-owner-read'|'bucket-owner-full-control'        
+    s3_filepath : str or list
+        path to the file within the bucket to upload the file
+    s3_folderpath : str or list
+        path to the folder within the bucket to upload the file
     region_name : str
         name of AWS region (default value 'us-west-2')
     environment : str
@@ -776,20 +779,37 @@ def s3_upload(bucket,
     """
 
     # TODO check that permission is a proper type
-    if (type(s3_folderpath) == list): # Multiple s3 locations
-        if (type(local_filepath) == list):
-            if len(s3_folderpath) != len(local_filepath):
-                raise ValueError('Length of s3_folderpath argument must be equal to the length of local_filepath argument')
+    if not s3_filepath:
+        if not s3_folderpath:            
+            raise ValueError("Either s3_folderpath or s3_filepath argument must be specified.")
+
+        if (type(s3_folderpath) == list): # Multiple s3 locations
+            if (type(local_filepath) == list):
+                if len(s3_folderpath) != len(local_filepath):
+                    raise ValueError('Length of s3_folderpath argument must be equal to the length of local_filepath argument')
+            else:
+                raise ValueError('If the \'s3_folderpath\' argument is a list, \'local_filepath\' argument must also be a list of equal length')
+        elif type(s3_folderpath) == str: # Single s3 location
+            if type(local_filepath) == list:
+                s3_folderpath = [s3_folderpath]*len(local_filepath)
+            if type(local_filepath) == str:
+                s3_folderpath = [s3_folderpath]
+                local_filepath = [local_filepath]
         else:
-            raise ValueError('If the \'s3_folderpath\' argument is a list, \'local_filepath\' argument must also be a list of equal length')
-    elif type(s3_folderpath) == str: # Single s3 location
-        if type(local_filepath) == list:
-            s3_folderpath = [s3_folderpath]*len(local_filepath)
-        if type(local_filepath) == str:
-            s3_folderpath = [s3_folderpath]
-            local_filepath = [local_filepath]
-    else:
-        raise ValueError("s3_folderpath datatype not supported.")
+            raise ValueError("s3_folderpath datatype not supported.")
+    else: # if s3_filepath is not null
+        if (type(s3_filepath) == list): # Multiple s3 locations
+            if (type(local_filepath) == list):
+                if len(s3_filepath) != len(local_filepath):
+                    raise ValueError('Length of s3_folderpath argument must be equal to the length of local_filepath argument')
+            else:
+                raise ValueError('If the \'s3_filepath\' argument is a list, \'local_filepath\' argument must also be a list of equal length')
+        elif type(s3_filepath) == str: # Single s3 location            
+            if type(local_filepath) == str:
+                s3_filepath = [s3_filepath]
+                local_filepath = [local_filepath]            
+        else:
+            raise ValueError("s3_filepath datatype not supported.")
 
     mybucket = s3_get_bucket(bucket, region_name, environment, profile_name)
     # multipart_threshold and multipart_chunksize defaults = Amazon defaults
@@ -799,20 +819,23 @@ def s3_upload(bucket,
     # Making sure that all the local file paths are valid
     for p in local_filepath:
         if not os.path.isfile(p):
-            raise ValueError("\'{}\' is not a valid local file path".format(p))
+            raise ValueError(f"\'{p}\' is not a valid local file path")
     filenames = [f.split('/')[-1] for f in local_filepath]
 
     for i, filepath in enumerate(local_filepath):
         try:
-            obj_key = os.path.join(s3_folderpath[i], filenames[i])
-            print("upload in progress for {}".format(obj_key))
+            if s3_folderpath:
+                obj_key = os.path.join(s3_folderpath[i], filenames[i])
+            else:
+                obj_key = s3_filepath[i]
+
+            print(f"upload in progress for {obj_key}")
             mybucket.upload_file(filepath,
                                  obj_key,
                                  Config=config)
             permission = 'bucket-owner-full-control'
             if permission:
                 obj = mybucket.Object(obj_key)
-                print("\n", obj_key)
                 obj.Acl().put(ACL=permission)
 
         except boto3.exceptions.S3UploadFailedError as e:
@@ -820,7 +843,7 @@ def s3_upload(bucket,
                 raise S3UploadFailedError('If running locally, you must run aws-okta in the background. ' + str(e))
             else:
                 raise e
-        print('{} upload complete'.format(filepath))
+        print(f'{filepath} upload complete')
     return True
 
 

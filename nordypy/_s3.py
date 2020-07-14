@@ -112,8 +112,8 @@ def database_connect(database_key=None, yaml_filepath=None):
 
 
 def s3_to_redshift(copy_command=None, database_key=None, yaml_filepath=None,
-                   bucket=None, s3_filepath=None, redshift_table=None,
-                   query_group=None, delimiter=None, region_name='us-west-2',
+                   bucket=None, s3_filepath=None, redshift_table=None, dateformat=None,
+                   delimiter=None, region_name='us-west-2',
                    environment=None, profile_name=None):
     """
     Copy data from s3 to redshift. Requires a blank table to be built.
@@ -132,10 +132,10 @@ def s3_to_redshift(copy_command=None, database_key=None, yaml_filepath=None,
         - s3 file to be copied to redshift
     redshift_table (str)
         - schema.table of prebuilt table in redshift to be filled in
-    query_group (str)
-        - which query_group ['default', 'small', 'medium', 'large']
     delimiter ('|', ',', '\t')
         - delimiter to use when copying
+    dateformat : None or str, 'auto', https://docs.aws.amazon.com/redshift/latest/dg/automatic-recognition.html
+            if there are dates, how should they be interpreted
     region_name (str)
         - where in AWS
     environment ('aws' or 'local')
@@ -167,14 +167,11 @@ def s3_to_redshift(copy_command=None, database_key=None, yaml_filepath=None,
                                           bucket=bucket,
                                           s3_filepath=s3_filepath,
                                           redshift_table=redshift_table,
-                                          delimiter=delimiter)
+                                          delimiter=delimiter,
+                                          dateformat=dateformat)
     conn = database_connect(database_key=database_key,
                             yaml_filepath=yaml_filepath)
     cursor = conn.cursor()
-    if query_group:
-        query_group_sql = _assign_query_group(size=query_group)
-        cursor.execute(query_group_sql)
-        conn.commit()
     cursor.execute(copy_command)
     conn.commit()
     cursor.close()

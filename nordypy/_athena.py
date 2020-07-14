@@ -56,7 +56,7 @@ def athena_to_pandas(sql, bucket, s3_filepath=None,
     execution_id = execution['QueryExecutionId']
     state = 'RUNNING'
         
-    while state in ['RUNNING']:
+    while state in ['RUNNING', 'QUEUED']:
         response = client.get_query_execution(QueryExecutionId = execution_id)
 
         state = response['QueryExecution']['Status']['State']

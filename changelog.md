@@ -1,6 +1,22 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## Version 2.1.0
+
+### Added 
+
+- presto support for `database_get_data()` and `database_execute()` and `database_connect()`
+- separate test script for aws secrets manager
+- `s3_upload()` now supports using filepaths or folderpaths
+
+### Fixed
+
+- `athena_to_pandas()` can support queries in the QUEUED state rather than just those queries that run immediately
+- `_create_table_statement()` had a bug where "DATE" objects were causing KeyError in the datatypes dictionary
+
+### Removed
+
+- removed `query_group` functionality since it's not longer an option, the function creating the query_group SQL still exists at `_command_generation._assign_query_group()`
 
 ## Version 2.0.1 
 

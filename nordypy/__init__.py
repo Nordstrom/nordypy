@@ -5,6 +5,7 @@ from ._init_methods import initialize_project
 from ._init_methods import hello
 from ._init_methods import create_config_file
 from ._nordstrom_rock_it import rock_it
+
 # s3 functions
 from ._s3 import s3_to_redshift
 from ._s3 import s3_get_bucket
@@ -47,7 +48,7 @@ from ._secret import _get_secret
 # knowledge repo functions
 from ._knowledge_repo_utils import render_post
 
-__version__ = '2.0.21'
+__version__ = '2.1.0'
 
 __all__ = ["_datasource", "_init_methods", "_knowledge_repo_utils",
            "_nordstrom_rock_it", "_redshift_utils", "_s3", "_athena"

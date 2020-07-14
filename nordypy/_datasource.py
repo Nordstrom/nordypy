@@ -2,7 +2,10 @@ import psycopg2
 from psycopg2 import sql
 import teradatasql
 import pymysql
-import os, sys, re
+from sqlalchemy.engine import create_engine
+import sqlalchemy
+from sqlalchemy.sql import text
+import os, sys, re, time
 import yaml
 import pandas as pd
 from boto3.exceptions import S3UploadFailedError
@@ -103,6 +106,10 @@ def database_connect(database_key=None, yaml_filepath=None, autocommit=True):
                 conn = __mysql_connect(cfg, autocommit=autocommit)
             elif cfg['dbtype'] == 'teradata':
                 conn = __teradata_connect(cfg)
+                setattr(conn, 'dbtype', 'teradata')
+            elif cfg['dbtype'] == 'presto':
+                conn = __presto_connect(cfg)
+                setattr(conn, 'dbtype', 'presto')
             else:
                 conn = __redshift_connect(cfg, autocommit=autocommit)
         else:
@@ -134,6 +141,7 @@ def database_connect(database_key=None, yaml_filepath=None, autocommit=True):
     return conn
 
 def __redshift_connect(cfg, autocommit=True):
+    """Returns a redshift connction."""
     con = psycopg2.connect(host=cfg['host'],
                            dbname=cfg['dbname'],
                            password=cfg['password'],
@@ -144,6 +152,7 @@ def __redshift_connect(cfg, autocommit=True):
     return con
 
 def __mysql_connect(cfg, autocommit=True):
+    """Returns a mysql connction."""
     return pymysql.connect(host=cfg['host'],
                            db=cfg['dbname'],
                            password=cfg['password'],
@@ -151,7 +160,13 @@ def __mysql_connect(cfg, autocommit=True):
                            user=cfg['user'],
                            autocommit=autocommit)
 
+def __presto_connect(cfg):
+    """Returns a presto connction engine."""
+    conn_string = f"presto://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg['port']}/hive;AuthenticationType=LDAP Authentication;TimeZoneID=UTC"
+    return create_engine(conn_string, connect_args={'protocol': 'https'})
+
 def __teradata_connect(cfg):
+    """Returns a teradata connection."""
     config = {
         'host': cfg['host'],
         'password': cfg['password'],
@@ -284,8 +299,7 @@ def database_create_table(data=None, table_name='', make_public=True,
 
 
 def database_insert(data=None, table_name='', database_key=None,
-                    yaml_filepath=None, insert_statement=None, conn=None,
-                    query_group=None):
+                    yaml_filepath=None, insert_statement=None, conn=None):
     """
     Insert data into an already existing table. Can insert a full csv, a full
     pandas dataframe, a single tuple of data, or run an insert statement on
@@ -305,8 +319,6 @@ def database_insert(data=None, table_name='', database_key=None,
             - insert sql or sql file
     conn (psycopg2 Conn)
             - connection
-    query_group (str)
-            - None, 'small', 'medium', 'large'
 
     Returns
     -------
@@ -349,7 +361,6 @@ def database_insert(data=None, table_name='', database_key=None,
                      yaml_filepath=yaml_filepath,
                      sql=insert_statement,
                      conn=conn,
-                     query_group=query_group,
                      return_data=False,
                      as_pandas=False)
     print('Data inserted into table {}'.format(table_name))
@@ -357,8 +368,7 @@ def database_insert(data=None, table_name='', database_key=None,
 
 
 def database_execute(database_key=None, yaml_filepath=None, sql=None,
-                     conn=None, return_data=False, as_pandas=False,
-                     query_group=None):
+                     conn=None, return_data=False, as_pandas=False):
     """Excecute one or more sql statements. Works for redshift, mysql and teradata.
 
     Parameters
@@ -380,8 +390,6 @@ def database_execute(database_key=None, yaml_filepath=None, sql=None,
         indcates that data should be returned from the final query
     as_pandas : bool
         if data is returned, should it be as a dataframe
-    query_group : str
-        assign query_group [None, 'default', 'small', 'medium', 'large']
 
     Returns
     -------
@@ -397,16 +405,28 @@ def database_execute(database_key=None, yaml_filepath=None, sql=None,
         raise ValueError("SQL statements must contain ';'")
 
     sqlcode = _strip_sql(sqlcode)
-
-    if query_group:
-        sqlcode = _assign_query_group(size=query_group) + sqlcode
     sql_statements = sqlcode.split(';')[:-1]
 
     # get connection if not there
     if not conn:
         conn = database_connect(database_key=database_key, yaml_filepath=yaml_filepath)
         close_connection = True
-    cursor = conn.cursor()
+    if hasattr(conn, 'dbtype'):
+        if conn.dbtype == 'presto':
+            with conn.connect() as con:  # presto path
+                for i, stmt in enumerate(sql_statements):
+                    if stmt.strip().lower().startswith('select') or stmt.strip().lower().startswith('with') :
+                        data = pd.read_sql(text(stmt), conn)
+                        print('Statement {} finished'.format(i))
+                        return data
+                    else:
+                        con.execute(text(stmt).execution_options(autocommit=True))
+                        print('Statement {} finished'.format(i))
+                    time.sleep(60)
+        else:
+            cursor = conn.cursor() # teradata
+    else: # redshift and mysql
+        cursor = conn.cursor()
 
     if as_pandas is True:
         # assume if they want a pandas return that data should return too
@@ -470,7 +490,7 @@ def database_get_column_names(database_key=None, yaml_filepath=None,
 
 
 def database_get_data(database_key=None, yaml_filepath=None, sql=None,
-                      as_pandas=False, conn=None, query_group=None):
+                      as_pandas=False, conn=None):
     """
     Helper function to connect to a datasource, run the specified sql
     statement(s), close the connection and return the result(s). 
@@ -493,8 +513,6 @@ def database_get_data(database_key=None, yaml_filepath=None, sql=None,
         established connection
     as_pandas : bool
         return data as a pandas dataframe
-    query_group : str
-        assign query_group [None, 'default', 'small', 'medium', 'large']
 
 
     Returns
@@ -518,17 +536,17 @@ def database_get_data(database_key=None, yaml_filepath=None, sql=None,
                 yaml_filepath = None
         conn = database_connect(database_key, yaml_filepath)
         close_connection = True
-    if as_pandas:
-        if query_group:
-            sql = _assign_query_group(size=query_group) + sql
+    if hasattr(conn, 'dbtype'): # presto will always return in pandas
+        if sql.endswith(';'): # presto doesn't like ';'
+            sql = sql[:-1]
+        data = pd.read_sql(sql=sql, con=conn)
+        if conn.dbtype == 'presto':
+            return data
+    if as_pandas: # for anything other than presto
         data = pd.read_sql(sql=sql, con=conn)
     else:
         cursor = conn.cursor()
         try:
-            if query_group:
-                query_group_sql = _assign_query_group(size=query_group)
-                cursor.execute(query_group_sql)
-                conn.commit()
             cursor.execute(sql)
             data = cursor.fetchall()
             cursor.close()
@@ -594,7 +612,7 @@ def database_list_tables(schemaname=None, tableowner=None, searchstring=None,
 
 
 def database_to_pandas(database_key=None, yaml_filepath=None, sql=None,
-                       conn=None, query_group=None):
+                       conn=None):
     """Convenience wrapper for for database_get_data to pandas function. 
     Works for redshift, mysql and teradata.
     """
@@ -602,14 +620,13 @@ def database_to_pandas(database_key=None, yaml_filepath=None, sql=None,
                              yaml_filepath=yaml_filepath,
                              sql=sql,
                              conn=conn,
-                             as_pandas=True,
-                             query_group=query_group)
+                             as_pandas=True)
 
 
 def data_to_redshift(data, table_name, bucket, s3_filepath='temp',
                      database_key=None, yaml_filepath=None,
                      copy_command=None, create_statement=None, delimiter=None,
-                     drop_table=False, environment=None,
+                     drop_table=False, environment=None, dateformat=None,
                      region_name='us-west-2', profile_name=None):
     """
     Move data from pandas dataframe or csv to redshift. This function will automatically create a table in redshift if
@@ -635,6 +652,8 @@ def data_to_redshift(data, table_name, bucket, s3_filepath='temp',
             prebuilt create sql or path to sql file, will be generated if None
     delimiter : None or str, default='|', ',', '\t'
             data delimiter
+    dateformat : None or str, 'auto', https://docs.aws.amazon.com/redshift/latest/dg/automatic-recognition.html
+            if there are dates, how should they be interpreted
     drop_table : bool
             drop table if exists?
     environment : str, 'aws', 'local'
@@ -670,8 +689,7 @@ def data_to_redshift(data, table_name, bucket, s3_filepath='temp',
         table_exists = "select exists(select * from information_schema.tables where table_schema='{}' and table_name='{}');".format(
             schema, name)
         if not database_get_data(database_key=database_key,
-                                 yaml_filepath=yaml_filepath, sql=table_exists,
-                                 query_group='small')[0][0]:
+                                 yaml_filepath=yaml_filepath, sql=table_exists)[0][0]:
             database_create_table(data=data,
                                   table_name=table_name,
                                   database_key=database_key,
@@ -685,7 +703,7 @@ def data_to_redshift(data, table_name, bucket, s3_filepath='temp',
     # copy from s3 to redshift
     s3_to_redshift(copy_command=copy_command, database_key=database_key,
                    yaml_filepath=yaml_filepath, environment=environment,
-                   bucket=bucket, s3_filepath=s3_filepath,
+                   bucket=bucket, s3_filepath=s3_filepath, dateformat=dateformat,
                    redshift_table=table_name, delimiter=delimiter,
                    region_name=region_name, profile_name=profile_name)
     print('Data upload to Redshift via S3')
@@ -716,7 +734,7 @@ def read_sql_file(sql_filename=None):
 
 def redshift_to_redshift(yaml_filepath=None, database_key_from=None,
                          database_key_to=None, select_sql=None,
-                         query_group=None, to_redshift_table=None, bucket=None,
+                         to_redshift_table=None, bucket=None,
                          s3_filepath=None, unload_command=None,
                          environment=None, region_name='us-west-2',
                          profile_name=None, delimiter='|', parallel=True,
@@ -725,8 +743,7 @@ def redshift_to_redshift(yaml_filepath=None, database_key_from=None,
     try:
         redshift_to_s3(yaml_filepath=yaml_filepath,
                        database_key=database_key_from, select_sql=select_sql,
-                       query_group=query_group, bucket=bucket,
-                       s3_filepath=s3_filepath, environment=environment,
+                       bucket=bucket, s3_filepath=s3_filepath, environment=environment,
                        region_name=region_name, profile_name=profile_name,
                        unload_command=unload_command, delimiter=delimiter,
                        parallel=parallel, gzip=gzip, manifest=manifest,
@@ -740,7 +757,7 @@ def redshift_to_redshift(yaml_filepath=None, database_key_from=None,
 
 
 def redshift_to_s3(database_key=None, yaml_filepath=None, select_sql=None,
-                   query_group=None, conn=None, bucket=None, s3_filepath=None,
+                   conn=None, bucket=None, s3_filepath=None,
                    environment=None, region_name='us-west-2',
                    profile_name=None, unload_command=None, delimiter='|',
                    parallel=True, gzip=None, manifest=False,
@@ -765,8 +782,6 @@ def redshift_to_s3(database_key=None, yaml_filepath=None, select_sql=None,
         s3 bucket to move things to
     s3_filepath : str [REQUIRED]
             - s3 file location in bucket
-    query_group : str
-        assign query_group [None, 'default', 'small', 'medium', 'large']
     conn : database connection
         database connection object if you want to pass in an already
         established connection
@@ -814,10 +829,6 @@ def redshift_to_s3(database_key=None, yaml_filepath=None, select_sql=None,
         conn = database_connect(database_key, yaml_filepath)
         close_connection = True
     cursor = conn.cursor()
-    if query_group:
-        query_group_sql = _assign_query_group(size=query_group)
-        cursor.execute(query_group_sql)
-        conn.commit()
     cursor.execute(unload_command)
     conn.commit()
     cursor.close()

@@ -39,7 +39,7 @@ def _create_table_statement(data, table_name, conn):
         'category': 'VARCHAR',
         'int8': 'INT2', 'int16': 'INT2', 'int32': 'INT4', 'int64': 'INT8',
         'uint8': 'INT2', 'uint16': 'INT4', 'uint32': 'INT8', 'uint64': 'INT8',
-        'datetime64[ns]': 'TIMESTAMP', 'date': 'DATE',
+        'datetime64[ns]': 'TIMESTAMP', 'timedelta64[ns]': 'VARCHAR', 'date': 'DATE',
         'bool': 'BOOL',
     }
 
@@ -51,7 +51,7 @@ def _create_table_statement(data, table_name, conn):
             if isinstance(data[col].iloc[0], datetime.date):
                 dtype = 'DATE'
 
-            if redshift_dtypes[str(dtype)] == 'VARCHAR':
+            elif redshift_dtypes[str(dtype)] == 'VARCHAR':  
                 max_length = _varchar_max_length(data[col].astype(str).str.len().max())
                 dtype = ' VARCHAR(' + str(max_length) + ')'
         else:
@@ -101,15 +101,19 @@ def _generate_copy_command(copy_command=None,
                            s3_filepath=None,
                            redshift_table=None,
                            delimiter=None,
-                           copy_format=None):
+                           copy_format=None,
+                           dateformat=None):
     # fill in redshift schema.table, s3 path and credentials
 
     # build copy_command from scratch
+    # dateformat will tell redshift how to interpret dates in the s3 data
     if not copy_command:
         copy_command = ["copy " + redshift_table,
                         " from 's3://" + bucket + "/" + s3_filepath + "'",
                         " credentials",
                         " '" + cred_str + "'"]
+        if dateformat:
+            copy_command.append(f" dateformat '{dateformat}'")
         if delimiter:
             del_str = " delimiter " + "'{}'".format(delimiter)
             copy_command.append(del_str)

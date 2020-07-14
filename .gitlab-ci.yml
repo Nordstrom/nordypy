@@ -1,7 +1,7 @@
 stages:
-    - image
-    - test
-    - deploy
+    # - image
+    # - test
+    # - deploy
 
 before_script:
     - |

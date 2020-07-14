@@ -209,7 +209,7 @@ nordypy.database_analyze_table(database_key='my_redshift',
 
 </a>
 
-Returns a DBconnection to the database of your choosing. Works for redshift, mysql and teradata.
+Returns a DBconnection to the database of your choosing. Works for redshift, mysql, teradata and presto.
 
 ```python
 conn = nordypy.database_connect(database_key='my_redshift',
@@ -293,15 +293,14 @@ nordypy.database_execute(database_key='my_redshift',
 
 </a>
 
-Run a single query and return data as records or as a pandas dataframe. Works for redshift, mysql and teradata.
+Run a single query and return data as records or as a pandas dataframe. Works for redshift, mysql, teradata and presto.
 
 ```python
 sql = 'select top 10 * from schema.my_table;'
 data = nordypy.database_get_data(database_key='my_redshift',
                                  yaml_filepath='config.yaml',
                                  sql=sql,
-                                 as_pandas=True,
-                                 query_group='default')
+                                 as_pandas=True)
 ```
 
 ---
@@ -684,7 +683,7 @@ df = nordypy.s3_to_pandas(bucket='mybucket',
 ### `nordypy.s3_upload()`
 
 </a>
-Upload a file to S3.
+Uploads a file or a list of files to an S3 bucket, allows you to set permssions on upload.
 
 ```python
 # while running aws-okta

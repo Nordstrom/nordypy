@@ -15,7 +15,9 @@ requires=[
           "pystache",
           "pandas",
           "pymysql",
-          "teradatasql >=16.20.0.59"
+          "teradatasql >=16.20.0.59",
+          "sqlalchemy",
+          "pyhive"
           ]
 classifiers = ["License :: OSI Approved :: Apache Software License"]
 

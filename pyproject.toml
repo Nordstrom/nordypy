@@ -17,7 +17,8 @@ requires=[
           "pymysql",
           "teradatasql >=16.20.0.59",
           "sqlalchemy",
-          "pyhive"
+          "pyhive",
+          "requests"
           ]
 classifiers = ["License :: OSI Approved :: Apache Software License"]
 

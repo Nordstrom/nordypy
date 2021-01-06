@@ -1,6 +1,17 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## Version 2.1.2
+
+### Added 
+
+- support using environment variables for connections for all functions
+- ability to use premade connection (`conn`) for all functions
+- using `ENV` variables for connections is now preferred over `yaml` files
+
+### Fixed 
+- autocommit issue for database functions using environment variables
+
 ## Version 2.1.0
 
 ### Added 

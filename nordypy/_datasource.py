@@ -20,7 +20,7 @@ from ._secret import _get_secret
 
 
 def database_analyze_table(database_key=None, yaml_filepath=None, table=None,
-                           schema=None):
+                           schema=None, conn=None):
     """Analyze table stats in redshift. Will NOT work for teradata.
 
     Parameters
@@ -43,23 +43,24 @@ def database_analyze_table(database_key=None, yaml_filepath=None, table=None,
     result = database_get_data(database_key=database_key,
                                yaml_filepath=yaml_filepath,
                                sql=sql,
-                               as_pandas=True)
+                               as_pandas=True, 
+                               conn=conn)
     return result
 
 
 def database_connect(database_key=None, yaml_filepath=None, autocommit=True):
-    """Return a database connection object. Connect with YAML config or bash
+    """Return a database connection object. Connect with YAML config or
     environment variables. Works for redshift, mysql, and teradata.
 
     Parameters
     ----------
     database_key : str
-            indicates which yaml login you plan to use of the bash_variable key
+            indicates ENV variable or which yaml login you plan to use
             if no YAML file is provided
     yaml_filepath : str [optional]
             path to yaml file to connect
             if no yaml_file is given, will assume that the database_key is for
-            a bash_variable
+            an ENV variable
 
     Returns
     -------
@@ -67,7 +68,7 @@ def database_connect(database_key=None, yaml_filepath=None, autocommit=True):
 
     Examples
     --------
-    # if connection in bash_profile
+    # if connection string in ENV variables
     conn = nordypy.database_connect('REDSHIFT')
 
     # yaml file with only one profile
@@ -118,12 +119,23 @@ def database_connect(database_key=None, yaml_filepath=None, autocommit=True):
 
     elif database_key:
         try:
-            try:
-                # redshift
-                conn = psycopg2.connect(os.environ[database_key], autocommit=autocommit)
-            except psycopg2.OperationalError:
-                # mysql
-                conn = pymysql.connect(os.environ[database_key], autocommit=autocommit)
+            cfg = __generate_cfg_from_ENV(database_key)
+            if 'dbtype' not in cfg:
+                print("UserWarning: Update ENV with 'dbtype' parameter: ['redshift', 'mysql', 'teradata'] -- ")
+            if 'dbtype' in cfg:
+                if cfg['dbtype'] == 'mysql':
+                    conn = __mysql_connect(cfg, autocommit=autocommit)
+                elif cfg['dbtype'] == 'teradata':
+                    conn = __teradata_connect(cfg)
+                    setattr(conn, 'dbtype', 'teradata')
+                elif cfg['dbtype'] == 'presto':
+                    conn = __presto_connect(cfg)
+                    setattr(conn, 'dbtype', 'presto')
+                else:
+                    conn = __redshift_connect(cfg, autocommit=autocommit)
+            else:
+                # default to redshift database
+                conn = __redshift_connect(cfg, autocommit=autocommit)
         except (KeyError, pymysql.err.OperationalError):
             # for the case where positional arguments were used and the
             # datasource was actually the YAML path
@@ -137,19 +149,19 @@ def database_connect(database_key=None, yaml_filepath=None, autocommit=True):
                                         database_key=None,
                                         autocommit=autocommit)
     else:
-        raise ValueError('Provide a YAML file path or a connection string via a bash_variable')
+        raise ValueError('Provide a YAML file path or a connection string via a ENV variable')
     return conn
 
 def __redshift_connect(cfg, autocommit=True):
     """Returns a redshift connction."""
-    con = psycopg2.connect(host=cfg['host'],
+    conn = psycopg2.connect(host=cfg['host'],
                            dbname=cfg['dbname'],
                            password=cfg['password'],
                            port=cfg['port'],
                            user=cfg['user'])
-    con.autocommit = autocommit
+    conn.autocommit = autocommit
     
-    return con
+    return conn
 
 def __mysql_connect(cfg, autocommit=True):
     """Returns a mysql connction."""
@@ -184,6 +196,21 @@ def __teradata_connect(cfg):
 
     return teradatasql.connect(**config)
 
+def __generate_cfg_from_ENV(c):
+    # connection string separated by spaces
+    try:
+        cfg = {}
+        for value in os.environ[env_variable].split():
+            k, v = value.split('=')
+            cfg[k] = v
+    except ValueError:
+        cfg = {}
+        for value in os.environ[env_variable].split(';'):
+            k, v = value.split('=')
+            cfg[k] = v
+    return cfg
+
+
 def database_drop_table(table_name=None, database_key=None, yaml_filepath=None,
                         conn=None):
     """
@@ -194,7 +221,7 @@ def database_drop_table(table_name=None, database_key=None, yaml_filepath=None,
     table_name : str
             - schema.table
     database_key (str)
-            - bash or yaml variable
+            - ENV or yaml variable
     yaml_filepath (str)
             - where if the yaml file
     conn (psycopg2 connection)
@@ -241,7 +268,7 @@ def database_create_table(data=None, table_name='', make_public=True,
     make_public (boolean)
             - should the table be made public
     database_key (str)
-            - yaml or bash key
+            - ENV variable or yaml key
     yaml_filepath (str) [optional]
             - path and file name of yaml file
     create_statement (str or filepath)
@@ -312,7 +339,7 @@ def database_insert(data=None, table_name='', database_key=None,
     table_name (str)
             - schema.tablename of table in the database
     database_key (str)
-            - yaml or bash key
+            - ENV variable or yaml key
     yaml_filepath (str) [optional]
             - path and file name of yaml file
     insert_statement (str or filepath)
@@ -375,12 +402,12 @@ def database_execute(database_key=None, yaml_filepath=None, sql=None,
 
     ----------
     database_key :  str [REQUIRED]
-        indicates which yaml login you plan to use of the bash_variable
+        indicates which yaml login you plan to use or the ENV variable
         key if no YAML file is provided
     yaml_filepath : str [optional]
         path to yaml file to connect
         if no yaml_file is given, will assume that the database_key is
-        for a bash_variable
+        for an ENV variable
     sql : str or filename
         single or multiple sql statements separated with ";" or filepath to
         sql file to be executed
@@ -420,7 +447,7 @@ def database_execute(database_key=None, yaml_filepath=None, sql=None,
                         print('Statement {} finished'.format(i))
                         return data
                     else:
-                        con.execute(text(stmt).execution_options(autocommit=True))
+                        conn.execute(text(stmt).execution_options(autocommit=True))
                         print('Statement {} finished'.format(i))
                     time.sleep(60)
         else:
@@ -458,7 +485,8 @@ def database_execute(database_key=None, yaml_filepath=None, sql=None,
 
 
 def database_get_column_names(database_key=None, yaml_filepath=None,
-                              table=None, schema=None, data_type=False):
+                              table=None, schema=None, data_type=False,
+                              conn=None):
     """Determine column names on a particular table. Will NOT work for teradata.
 
     Parameters
@@ -472,6 +500,9 @@ def database_get_column_names(database_key=None, yaml_filepath=None,
         table schema in redshift (ex. public)
     data_type : bool
         return column type
+    conn : database connection
+        database connection object if you want to pass in an already
+        established connection
     """
     if table is None:
         raise ValueError('Provide a table name: ex. sessions')
@@ -485,7 +516,7 @@ def database_get_column_names(database_key=None, yaml_filepath=None,
         sql = _redshift_utils.table_columns.format('', schema, table)
     result = database_get_data(database_key=database_key,
                                yaml_filepath=yaml_filepath, sql=sql,
-                               as_pandas=True)
+                               as_pandas=True, conn=conn)
     return result
 
 
@@ -499,12 +530,12 @@ def database_get_data(database_key=None, yaml_filepath=None, sql=None,
     Parameters
     ----------
     database_key : str [REQUIRED]
-        indicates which yaml login you plan to use or the bash_variable
+        indicates which yaml login you plan to use or the ENV variable
         key if no YAML file is provided
     yaml_filepath : str
         path to yaml file to connect
         if no yaml_file is given, will assume that the database_key is
-        for a bash_variable
+        for a ENV variable
     sql : str or filename
         SQL to execute in redshift, can be single string or multiple
         statements
@@ -572,12 +603,12 @@ def database_list_tables(schemaname=None, tableowner=None, searchstring=None,
     searchstring : str
         description
     database_key : str [REQUIRED]
-        indicates which yaml login you plan to use or the bash_variable
-        key if no YAML file is provided
+        indicates which yaml login you plan to use or the ENV variable
+        if no YAML file is provided
     yaml_filepath : str
         path to yaml file to connect
         if no yaml_file is given, will assume that the database_key is
-        for a bash_variable
+        for a ENV variable
     conn : database connection
         database connection object if you want to pass in an already
         established connection
@@ -627,7 +658,7 @@ def data_to_redshift(data, table_name, bucket, s3_filepath='temp',
                      database_key=None, yaml_filepath=None,
                      copy_command=None, create_statement=None, delimiter=None,
                      drop_table=False, environment=None, dateformat=None,
-                     region_name='us-west-2', profile_name=None):
+                     region_name='us-west-2', profile_name=None, conn=None):
     """
     Move data from pandas dataframe or csv to redshift. This function will automatically create a table in redshift if
     none exists, move the files up to s3 and then copy them to redshift from there. If a table already exists, the
@@ -643,7 +674,7 @@ def data_to_redshift(data, table_name, bucket, s3_filepath='temp',
     s3_filepath : str [required]
             upload location in s3
     database_key : str [REQUIRED]
-            yaml or bash key
+            ENV variable or yaml key
     yaml_filepath : str
             path and file name of yaml file
     copy_command : str or filepath
@@ -660,6 +691,9 @@ def data_to_redshift(data, table_name, bucket, s3_filepath='temp',
             where is this running?
     region_name : str
     profile_name : str
+    conn : database connection
+            database connection object if you want to pass in an already
+            established connection
 
     Returns
     -------
@@ -675,11 +709,12 @@ def data_to_redshift(data, table_name, bucket, s3_filepath='temp',
 
     if drop_table:
         database_drop_table(table_name=table_name, database_key=database_key,
-                            yaml_filepath=yaml_filepath)
+                            yaml_filepath=yaml_filepath, conn=conn)
         database_create_table(data=data, table_name=table_name,
                               database_key=database_key,
                               yaml_filepath=yaml_filepath,
-                              create_statement=create_statement)
+                              create_statement=create_statement, 
+                              conn=conn)
     else:
         try:
             schema, name = table_name.split('.')
@@ -689,12 +724,15 @@ def data_to_redshift(data, table_name, bucket, s3_filepath='temp',
         table_exists = "select exists(select * from information_schema.tables where table_schema='{}' and table_name='{}');".format(
             schema, name)
         if not database_get_data(database_key=database_key,
-                                 yaml_filepath=yaml_filepath, sql=table_exists)[0][0]:
+                                 yaml_filepath=yaml_filepath, 
+                                 sql=table_exists,
+                                 conn=conn)[0][0]:
             database_create_table(data=data,
                                   table_name=table_name,
                                   database_key=database_key,
                                   yaml_filepath=yaml_filepath,
-                                  create_statement=create_statement)
+                                  create_statement=create_statement,
+                                  conn=conn)
     # upload data to s3
     pandas_to_s3(data=data, delimiter=delimiter, bucket=bucket,
                  s3_filepath=s3_filepath, environment=environment,
@@ -705,7 +743,7 @@ def data_to_redshift(data, table_name, bucket, s3_filepath='temp',
                    yaml_filepath=yaml_filepath, environment=environment,
                    bucket=bucket, s3_filepath=s3_filepath, dateformat=dateformat,
                    redshift_table=table_name, delimiter=delimiter,
-                   region_name=region_name, profile_name=profile_name)
+                   region_name=region_name, profile_name=profile_name, conn=conn)
     print('Data upload to Redshift via S3')
     return None
 
@@ -738,7 +776,8 @@ def redshift_to_redshift(yaml_filepath=None, database_key_from=None,
                          s3_filepath=None, unload_command=None,
                          environment=None, region_name='us-west-2',
                          profile_name=None, delimiter='|', parallel=True,
-                         gzip=True, manifest=False, allowoverwrite=True):
+                         gzip=True, manifest=False, allowoverwrite=True, 
+                         conn=None):
     """Move data from one redshift database to another."""
     try:
         redshift_to_s3(yaml_filepath=yaml_filepath,
@@ -747,7 +786,7 @@ def redshift_to_redshift(yaml_filepath=None, database_key_from=None,
                        region_name=region_name, profile_name=profile_name,
                        unload_command=unload_command, delimiter=delimiter,
                        parallel=parallel, gzip=gzip, manifest=manifest,
-                       allowoverwrite=allowoverwrite)
+                       allowoverwrite=allowoverwrite, conn=conn)
     except S3UploadFailedError as e:
         raise (e)
     try:
@@ -772,7 +811,7 @@ def redshift_to_s3(database_key=None, yaml_filepath=None, select_sql=None,
     Parameters
     ----------
     database_key : str [REQUIRED]
-        bash or yaml variable
+        ENV variable or yaml key
     yaml_filepath : str [REQUIRED]
         where if your yaml file
     select_sql : str or filename [REQUIRED]

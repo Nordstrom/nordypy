@@ -48,7 +48,7 @@ from ._secret import _get_secret
 # knowledge repo functions
 from ._knowledge_repo_utils import render_post
 
-__version__ = '2.1.1'
+__version__ = '2.1.2.1'
 
 __all__ = ["_datasource", "_init_methods", "_knowledge_repo_utils",
            "_nordstrom_rock_it", "_redshift_utils", "_s3", "_athena"

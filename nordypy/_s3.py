@@ -28,17 +28,17 @@ def s3_download_all(bucket=None, local_filepath='/.', environment=None,
 
 
 def database_connect(database_key=None, yaml_filepath=None):
-    """Return a database connection object. Connect with YAML config or bash
+    """Return a database connection object. Connect with YAML config or ENV
     environment variables.
 
     Parameters
     ----------
     database_key : str [REQUIRED]
-        indicates which yaml login you plan to use of the bash_variable key if
+        indicates which yaml login you plan to use or the ENV variable key if
         no YAML file is provided
     yaml_filepath : str [REQUIRED]
         path to yaml file to connect if no yaml_file is given, will assume
-        that the datasource_key is for a bash_variable
+        that the datasource_key is for an ENV variable
 
     Returns
     -------
@@ -46,7 +46,7 @@ def database_connect(database_key=None, yaml_filepath=None):
 
     Examples
     --------
-    # if connection in bash_profile
+    # if connection in environment variables
     solr = nordypy.redshift_connect('PROD_REDSHIFT')
 
     # yaml file with only one profile
@@ -107,14 +107,14 @@ def database_connect(database_key=None, yaml_filepath=None):
                 conn = database_connect(yaml_filepath=yaml_filepath,
                                         database_key=None)
     else:
-        raise ValueError('Provide a YAML file path or a connection string via a bash_variable')
+        raise ValueError('Provide connection string via an ENV variable or YAML file path')
     return conn
 
 
 def s3_to_redshift(copy_command=None, database_key=None, yaml_filepath=None,
                    bucket=None, s3_filepath=None, redshift_table=None, dateformat=None,
                    delimiter=None, region_name='us-west-2',
-                   environment=None, profile_name=None):
+                   environment=None, profile_name=None, conn=None):
     """
     Copy data from s3 to redshift. Requires a blank table to be built.
 
@@ -142,6 +142,9 @@ def s3_to_redshift(copy_command=None, database_key=None, yaml_filepath=None,
         - where is the script running
     profile_name (str)
         - default 'nordstrom-federated'
+    conn : database connection
+        redshift database connection object if you want to pass in an already
+        established connection
 
     Returns
     -------
@@ -160,6 +163,7 @@ def s3_to_redshift(copy_command=None, database_key=None, yaml_filepath=None,
     """
     from nordypy._datasource import database_connect  # so no circular imports
 
+    close_connection = False
     cred_str = _s3_get_temp_creds(region_name=region_name,
                                   environment=environment,
                                   profile_name=profile_name)
@@ -169,13 +173,18 @@ def s3_to_redshift(copy_command=None, database_key=None, yaml_filepath=None,
                                           redshift_table=redshift_table,
                                           delimiter=delimiter,
                                           dateformat=dateformat)
-    conn = database_connect(database_key=database_key,
-                            yaml_filepath=yaml_filepath)
+    if not conn:
+        conn = database_connect(database_key=database_key,
+                                yaml_filepath=yaml_filepath)
+        close_connection = True
     cursor = conn.cursor()
     cursor.execute(copy_command)
     conn.commit()
     cursor.close()
-    conn.close()
+
+    # only close the connection if it was made specifically for this run
+    if close_connection:
+        conn.close()
     print('S3 Data copied to Redshift'.format(s3_filepath, redshift_table))
     return None
 

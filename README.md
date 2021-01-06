@@ -53,6 +53,7 @@ The Nordypy package is a set of tools to make python-based analysis and data sci
 - [s3_list_objects](#s3-list-objects)
 - [s3_rename_file](#s3-rename-file)
 - [s3_to_pandas](#s3-to-pandas)
+- [s3_to_redshift](#s3-to-redshift)
 - [s3_upload](#s3-upload)
 
 #### Athena Functions
@@ -75,7 +76,27 @@ The Nordypy package is a set of tools to make python-based analysis and data sci
 
 </a>
 
-Nordypy uses **yaml** files to configure your database connection. You can create your template yaml file by running the following from an ipython session.
+Nordypy uses either connection strings stored as **environment variables** (preferred) or **yaml** files to configure your database connection. 
+
+### Environment Variables 
+
+Your database connection should be sourced from your environment variables. An example of how to add a database entry to your `~/.bash_profile` is shown below. All entries need to be separated by a space (`' '`) or by a semicolon (`;`). 
+
+```bash
+# ~/.bash_profile
+
+export MY_REDSHIFT='dbtype=redshift host=<my redshift> dbname=<my dbname> user=<my user> password=<my password> port=<my port>'
+```
+
+When you use want to connect to this database using `nordypy` simply use the `ENV` variable name as the `database_key`. 
+
+```python
+conn = nordypy.database_connect(database_key = MY_REDSHIFT)
+```
+
+### YAML files 
+
+You can create your template yaml file by running the following from an ipython session.
 
 ```python
 In [1]: import nordypy
@@ -674,6 +695,24 @@ Read file directly from S3 into a pandas dataframe using a file buffer.
 # while running aws-okta
 df = nordypy.s3_to_pandas(bucket='mybucket',
                           s3_filepath='my_data.csv')
+```
+
+---
+
+<a name="s3-to-redshift">
+
+### `nordypy.s3_to_redshift()`
+
+</a>
+
+Copy data from s3 to redshift. Requires a blank table to be built.
+
+```python
+# while running aws-okta
+nordypy.s3_to_redshift(copy_command=copy_command, bucket='nordypy',
+                       s3_filepath='nordypy/mydata_',
+                       redshift_table='public.nordypy_test,
+                       conn=conn, delimiter='|')
 ```
 
 ---
